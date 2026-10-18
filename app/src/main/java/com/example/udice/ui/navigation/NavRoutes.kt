@@ -6,7 +6,6 @@ enum class UserRole {
 }
 
 object NavRoutes {
-    const val INICIO = "inicio"
     const val PREFERENCIAS = "preferencias"
     const val NUEVA_PUBLICACION = "nueva_publicacion"
     const val PERFIL = "perfil"

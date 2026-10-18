@@ -1,5 +1,6 @@
 package com.example.udice.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,13 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -23,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,7 +43,7 @@ fun UDiceBottomBar(
         modifier = Modifier.fillMaxWidth(),
         color = Blanco,
         shadowElevation = 8.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, GrisBordes)
+        border = BorderStroke(1.dp, GrisBordes)
     ) {
         Row(
             modifier = Modifier
@@ -62,15 +60,7 @@ fun UDiceBottomBar(
                 onClick = { onNavigate(NavRoutes.PREFERENCIAS) }
             )
 
-            // Tab 2: Inicio
-            BottomNavItem(
-                label = "Inicio",
-                icon = Icons.Default.Home,
-                isSelected = currentRoute == NavRoutes.INICIO,
-                onClick = { onNavigate(NavRoutes.INICIO) }
-            )
-
-            // Tab 3: Nueva Publicación (Solo si el rol es PUBLICADOR)
+            // Tab 2: Nueva Publicación (Solo si el rol es PUBLICADOR)
             if (currentRole == UserRole.PUBLICADOR) {
                 Box(
                     modifier = Modifier
@@ -89,7 +79,7 @@ fun UDiceBottomBar(
                 }
             }
 
-            // Tab 4: Perfil
+            // Tab 3: Perfil
             BottomNavItem(
                 label = "Perfil",
                 icon = Icons.Default.Person,
