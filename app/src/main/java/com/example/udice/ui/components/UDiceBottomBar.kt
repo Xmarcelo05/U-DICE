@@ -34,88 +34,86 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.udice.ui.theme.BorderGray
-import com.example.udice.ui.theme.DarkBlue
-import com.example.udice.ui.theme.PrimaryBlue
-import com.example.udice.ui.theme.PureWhite
-import com.example.udice.ui.theme.SlateGray
+import com.example.udice.ui.navigation.NavRoutes
+import com.example.udice.ui.navigation.UserRole
+import com.example.udice.ui.theme.AzulOscuro
+import com.example.udice.ui.theme.AzulPrincipal
+import com.example.udice.ui.theme.Blanco
+import com.example.udice.ui.theme.GrisBordes
+import com.example.udice.ui.theme.GrisPizarra
 
 @Composable
-fun BottomNavigationBar(
-    isPublisher: Boolean,
-    currentTab: String, // "preferences", "home", "new_post", "profile"
-    onTabSelected: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    showProfileTab: Boolean = false
+fun UDiceBottomBar(
+    currentRoute: String,
+    currentRole: UserRole,
+    onNavigate: (String) -> Unit
 ) {
     Surface(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .shadow(8.dp),
-        color = PureWhite
+        color = Blanco
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
         ) {
-            HorizontalDivider(color = BorderGray, thickness = 1.dp)
+            HorizontalDivider(color = GrisBordes, thickness = 1.dp)
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Tab Preferencias
                 BottomNavItem(
                     label = "Preferencias",
                     selectedIcon = Icons.Filled.Settings,
                     unselectedIcon = Icons.Outlined.Settings,
-                    isSelected = currentTab == "preferences",
-                    onClick = { onTabSelected("preferences") }
+                    isSelected = currentRoute == NavRoutes.PREFERENCIAS,
+                    onClick = { onNavigate(NavRoutes.PREFERENCIAS) }
                 )
 
-                // Tab Inicio (Feed)
+                // Tab Inicio (Feed de la Facultad)
                 BottomNavItem(
                     label = "Inicio",
                     selectedIcon = Icons.Filled.Home,
                     unselectedIcon = Icons.Outlined.Home,
-                    isSelected = currentTab == "home",
-                    onClick = { onTabSelected("home") }
+                    isSelected = currentRoute == NavRoutes.INICIO,
+                    onClick = { onNavigate(NavRoutes.INICIO) }
                 )
 
-                // Tab "+" (SOLO visible para el usuario Publicador)
-                if (isPublisher) {
+                // Tab "+" (SOLO visible si el rol es PUBLICADOR)
+                if (currentRole == UserRole.PUBLICADOR) {
                     Box(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(DarkBlue)
-                            .clickable { onTabSelected("new_post") },
+                            .background(AzulOscuro)
+                            .clickable { onNavigate(NavRoutes.NUEVA_PUBLICACION) },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Nueva Publicación",
-                            tint = PureWhite,
+                            tint = Blanco,
                             modifier = Modifier.size(26.dp)
                         )
                     }
                 }
 
-                // Tab Perfil (opcional, oculto por defecto para facilitar el merge con la rama de perfil)
-                if (showProfileTab) {
-                    BottomNavItem(
-                        label = "Perfil",
-                        selectedIcon = Icons.Filled.Person,
-                        unselectedIcon = Icons.Outlined.Person,
-                        isSelected = currentTab == "profile",
-                        onClick = { onTabSelected("profile") }
-                    )
-                }
+                // Tab Perfil
+                BottomNavItem(
+                    label = "Perfil",
+                    selectedIcon = Icons.Filled.Person,
+                    unselectedIcon = Icons.Outlined.Person,
+                    isSelected = currentRoute == NavRoutes.PERFIL,
+                    onClick = { onNavigate(NavRoutes.PERFIL) }
+                )
             }
         }
     }
@@ -130,24 +128,24 @@ private fun BottomNavItem(
     onClick: () -> Unit
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = if (isSelected) selectedIcon else unselectedIcon,
             contentDescription = label,
-            tint = if (isSelected) PrimaryBlue else SlateGray,
+            tint = if (isSelected) AzulPrincipal else GrisPizarra,
             modifier = Modifier.size(22.dp)
         )
         Text(
             text = label,
-            color = if (isSelected) PrimaryBlue else SlateGray,
             fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) AzulPrincipal else GrisPizarra
         )
         if (isSelected) {
             Box(
@@ -155,7 +153,7 @@ private fun BottomNavItem(
                     .padding(top = 2.dp)
                     .size(4.dp)
                     .clip(CircleShape)
-                    .background(PrimaryBlue)
+                    .background(AzulPrincipal)
             )
         }
     }

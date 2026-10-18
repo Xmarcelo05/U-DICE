@@ -1,5 +1,6 @@
 package com.example.udice.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,23 +30,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.udice.ui.components.BottomNavigationBar
 import com.example.udice.ui.components.PostCard
 import com.example.udice.ui.components.PostItem
-import com.example.udice.ui.components.UniversityHeader
-import com.example.udice.ui.theme.BorderGray
-import com.example.udice.ui.theme.DarkBlue
-import com.example.udice.ui.theme.InstitutionalBlue
-import com.example.udice.ui.theme.LightBlueGray
-import com.example.udice.ui.theme.PrimaryBlue
-import com.example.udice.ui.theme.PureWhite
+import com.example.udice.ui.theme.AzulOscuro
+import com.example.udice.ui.theme.AzulInstitucional
+import com.example.udice.ui.theme.AzulPrincipal
+import com.example.udice.ui.theme.Blanco
+import com.example.udice.ui.theme.GrisAzuladoClaro
+import com.example.udice.ui.theme.GrisBordes
 
 @Composable
-fun FeedScreen(
-    isPublisher: Boolean,
-    onNavigateToPreferences: () -> Unit,
-    onNavigateToNewPost: () -> Unit
-) {
+fun InicioFeedScreen() {
     val categories = listOf("Todos", "Eventos", "Conferencias", "Convocatorias", "Seminarios", "Avisos")
     var selectedCategory by remember { mutableStateOf("Todos") }
 
@@ -63,7 +57,7 @@ fun FeedScreen(
                 description = "Se abren las inscripciones para las Becas de Excelencia 2026–2027. Aplica antes del 15 de octubre. Requisitos y formulario disponibles en el apartado de Becas y Ayudas en la app DBANU-Uleam.",
                 initialLikes = 213,
                 isInitiallySaved = true,
-                gradientColors = listOf(DarkBlue, InstitutionalBlue)
+                gradientColors = listOf(AzulOscuro, AzulInstitucional)
             ),
             PostItem(
                 id = "2",
@@ -75,7 +69,7 @@ fun FeedScreen(
                 description = "Participa en las jornadas académicas con expositores internacionales sobre avances en biotecnología aplicada a los recursos marinos y terrestres.",
                 initialLikes = 142,
                 isInitiallySaved = false,
-                gradientColors = listOf(InstitutionalBlue, PrimaryBlue)
+                gradientColors = listOf(AzulInstitucional, AzulPrincipal)
             ),
             PostItem(
                 id = "3",
@@ -87,7 +81,7 @@ fun FeedScreen(
                 description = "Mesa redonda para debatir los desafíos éticos y las oportunidades de la IA generativa en la investigación y formación profesional universitaria.",
                 initialLikes = 98,
                 isInitiallySaved = false,
-                gradientColors = listOf(DarkBlue, PrimaryBlue)
+                gradientColors = listOf(AzulOscuro, AzulPrincipal)
             ),
             PostItem(
                 id = "4",
@@ -99,7 +93,7 @@ fun FeedScreen(
                 description = "Estudiantes y egresados presentarán sus proyectos de innovación empresarial en la plaza central de la facultad. ¡Entrada libre para todos!",
                 initialLikes = 320,
                 isInitiallySaved = false,
-                gradientColors = listOf(InstitutionalBlue, DarkBlue)
+                gradientColors = listOf(AzulInstitucional, AzulOscuro)
             )
         )
     }
@@ -112,89 +106,66 @@ fun FeedScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            UniversityHeader(
-                title = "Feed de la Facultad"
-            )
-        },
-        bottomBar = {
-            BottomNavigationBar(
-                isPublisher = isPublisher,
-                currentTab = "home",
-                showProfileTab = false,
-                onTabSelected = { tab ->
-                    when (tab) {
-                        "preferences" -> onNavigateToPreferences()
-                        "home" -> { /* Ya estamos en el inicio */ }
-                        "new_post" -> onNavigateToNewPost()
-                    }
-                }
-            )
-        },
-        containerColor = LightBlueGray
-    ) { innerPadding ->
-        Box(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(GrisAzuladoClaro),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.TopCenter
+                .widthIn(max = 640.dp)
         ) {
-            Column(
+            // Barra de chips / filtros de categorías horizontales
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .widthIn(max = 640.dp)
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Barra de chips / filtros de categorías horizontales
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    categories.forEach { category ->
-                        val isSelected = category == selectedCategory
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedCategory = category },
-                            label = {
-                                Text(
-                                    text = category,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                )
-                            },
-                            shape = RoundedCornerShape(20.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PrimaryBlue,
-                                selectedLabelColor = PureWhite,
-                                containerColor = PureWhite,
-                                labelColor = DarkBlue
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = isSelected,
-                                borderColor = if (isSelected) PrimaryBlue else BorderGray
+                categories.forEach { category ->
+                    val isSelected = category == selectedCategory
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { selectedCategory = category },
+                        label = {
+                            Text(
+                                text = category,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AzulPrincipal,
+                            selectedLabelColor = Blanco,
+                            containerColor = Blanco,
+                            labelColor = AzulOscuro
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = if (isSelected) AzulPrincipal else GrisBordes
                         )
-                    }
+                    )
+                }
+            }
+
+            // Lista de publicaciones en el feed
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredPosts, key = { it.id }) { post ->
+                    PostCard(post = post)
                 }
 
-                // Lista de publicaciones en el feed
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(filteredPosts, key = { it.id }) { post ->
-                        PostCard(post = post)
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

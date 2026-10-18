@@ -7,46 +7,45 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
-    onPrimary = PureWhite,
-    primaryContainer = InstitutionalBlue,
-    onPrimaryContainer = PureWhite,
-    secondary = InstitutionalBlue,
-    onSecondary = PureWhite,
-    tertiary = DarkBlue,
-    onTertiary = PureWhite,
-    background = LightBlueGray,
-    onBackground = DarkBlue,
-    surface = PureWhite,
-    onSurface = DarkBlue,
-    surfaceVariant = PureWhite,
-    onSurfaceVariant = SlateGray,
-    outline = BorderGray,
-    outlineVariant = BorderGray
+    primary = AzulPrincipal,
+    onPrimary = Blanco,
+    primaryContainer = AzulInstitucional,
+    onPrimaryContainer = Blanco,
+    secondary = AzulInstitucional,
+    onSecondary = Blanco,
+    tertiary = AzulOscuro,
+    onTertiary = Blanco,
+    background = GrisAzuladoClaro,
+    onBackground = AzulOscuro,
+    surface = Blanco,
+    onSurface = AzulOscuro,
+    surfaceVariant = Blanco,
+    onSurfaceVariant = GrisPizarra,
+    outline = GrisBordes,
+    outlineVariant = GrisBordes
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlue,
-    onPrimary = PureWhite,
-    primaryContainer = InstitutionalBlue,
-    onPrimaryContainer = PureWhite,
-    secondary = InstitutionalBlue,
-    onSecondary = PureWhite,
-    tertiary = DarkBlue,
-    onTertiary = PureWhite,
-    background = DarkBlue,
-    onBackground = LightBlueGray,
-    surface = InstitutionalBlue,
-    onSurface = PureWhite,
-    surfaceVariant = DarkBlue,
-    onSurfaceVariant = SlateGray,
-    outline = SlateGray,
-    outlineVariant = SlateGray
+    primary = AzulPrincipal,
+    onPrimary = Blanco,
+    primaryContainer = AzulInstitucional,
+    onPrimaryContainer = Blanco,
+    secondary = AzulInstitucional,
+    onSecondary = Blanco,
+    tertiary = AzulOscuro,
+    onTertiary = Blanco,
+    background = AzulOscuro,
+    onBackground = GrisAzuladoClaro,
+    surface = AzulInstitucional,
+    onSurface = Blanco,
+    surfaceVariant = AzulOscuro,
+    onSurfaceVariant = GrisPizarra,
+    outline = GrisPizarra,
+    outlineVariant = GrisPizarra
 )
 
 @Composable
