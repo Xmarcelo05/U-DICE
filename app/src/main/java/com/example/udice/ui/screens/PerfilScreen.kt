@@ -52,6 +52,8 @@ import com.example.udice.ui.theme.GrisPizarra
 @Composable
 fun PerfilScreen(
     currentRole: UserRole = UserRole.PUBLICADOR,
+    onNavigateToMisPublicaciones: () -> Unit = {},
+    onNavigateToGuardados: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
@@ -140,10 +142,18 @@ fun PerfilScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (currentRole == UserRole.PUBLICADOR) {
-                            StatItem(number = "2", label = "Publicaciones")
+                            StatItem(
+                                number = "4",
+                                label = "Publicaciones",
+                                onClick = onNavigateToMisPublicaciones
+                            )
                             StatDivider()
                         }
-                        StatItem(number = "1", label = "Guardados")
+                        StatItem(
+                            number = "8",
+                            label = "Guardados",
+                            onClick = onNavigateToGuardados
+                        )
                         StatDivider()
                         StatItem(number = "94", label = "Me gusta")
                     }
@@ -168,8 +178,8 @@ fun PerfilScreen(
                             iconBg = Color(0xFFEFF6FF),
                             title = "Mis publicaciones",
                             subtitle = "Ver todas tus publicaciones creadas",
-                            badgeCount = "2",
-                            onClick = { /* Abrir lista de publicaciones */ }
+                            badgeCount = "4",
+                            onClick = onNavigateToMisPublicaciones
                         )
 
                         HorizontalDivider(
@@ -186,8 +196,8 @@ fun PerfilScreen(
                         iconBg = Color(0xFFEFF6FF),
                         title = if (currentRole == UserRole.LECTOR) "Mis guardados" else "Publicaciones guardadas",
                         subtitle = "Ver publicaciones que guardaste",
-                        badgeCount = "1",
-                        onClick = { /* Abrir guardados */ }
+                        badgeCount = "8",
+                        onClick = onNavigateToGuardados
                     )
 
                     HorizontalDivider(
@@ -275,8 +285,17 @@ fun PerfilScreen(
 }
 
 @Composable
-private fun StatItem(number: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun StatItem(
+    number: String,
+    label: String,
+    onClick: (() -> Unit)? = null
+) {
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp) else Modifier),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
             text = number,
             fontSize = 18.sp,

@@ -35,6 +35,8 @@ import com.example.udice.ui.theme.AzulInstitucional
 import com.example.udice.ui.theme.AzulPrincipal
 import com.example.udice.ui.theme.Blanco
 import com.example.udice.ui.theme.ColorEvento
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
 import com.example.udice.ui.theme.HeaderGradient
 
 @Composable
@@ -42,7 +44,8 @@ fun UDiceHeader(
     title: String,
     currentRole: UserRole,
     onRoleToggle: (() -> Unit)? = null,
-    onProfileClick: (() -> Unit)? = null
+    onProfileClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -60,6 +63,21 @@ fun UDiceHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
+                if (onBackClick != null) {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .padding(end = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = Blanco
+                        )
+                    }
+                }
+
                 // Logo oficial U-DICE de la universidad
                 Image(
                     painter = painterResource(id = R.drawable.logoblancosinfondo),

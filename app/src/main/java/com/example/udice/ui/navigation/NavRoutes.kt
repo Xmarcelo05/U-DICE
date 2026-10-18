@@ -13,4 +13,6 @@ object NavRoutes {
     const val PREFERENCIAS = "preferencias"
     const val NUEVA_PUBLICACION = "nueva_publicacion"
     const val PERFIL = "perfil"
+    const val GUARDADOS = "guardados"
+    const val MIS_PUBLICACIONES = "mis_publicaciones"
 }

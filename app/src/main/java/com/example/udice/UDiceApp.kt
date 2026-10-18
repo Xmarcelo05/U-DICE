@@ -19,8 +19,10 @@ import com.example.udice.ui.components.UDiceHeader
 import com.example.udice.ui.navigation.NavRoutes
 import com.example.udice.ui.navigation.UserRole
 import com.example.udice.ui.screens.ForgotPasswordScreen
+import com.example.udice.ui.screens.GuardadosScreen
 import com.example.udice.ui.screens.InicioFeedScreen
 import com.example.udice.ui.screens.LoginScreen
+import com.example.udice.ui.screens.MisPublicacionesScreen
 import com.example.udice.ui.screens.NuevaPublicacionScreen
 import com.example.udice.ui.screens.PerfilScreen
 import com.example.udice.ui.screens.PreferenciasScreen
@@ -50,8 +52,12 @@ fun UDiceApp(
             NavRoutes.PREFERENCIAS -> "Preferencias"
             NavRoutes.NUEVA_PUBLICACION -> "Nueva Publicación"
             NavRoutes.PERFIL -> "Mi Perfil"
+            NavRoutes.GUARDADOS -> "Guardados"
+            NavRoutes.MIS_PUBLICACIONES -> "Mis Publicaciones"
             else -> "U-DICE"
         }
+
+        val canGoBack = currentRoute == NavRoutes.GUARDADOS || currentRoute == NavRoutes.MIS_PUBLICACIONES
 
         Scaffold(
             topBar = {
@@ -59,11 +65,12 @@ fun UDiceApp(
                     UDiceHeader(
                         title = screenTitle,
                         currentRole = currentRole,
+                        onBackClick = if (canGoBack) { { navController.popBackStack() } } else null,
                         onRoleToggle = {
                             val newRole = if (currentRole == UserRole.PUBLICADOR) UserRole.LECTOR else UserRole.PUBLICADOR
                             currentRole = newRole
-                            // Si era publicador y estaba en Nueva Publicación pero cambió a Lector, redirigir a Inicio
-                            if (newRole == UserRole.LECTOR && currentRoute == NavRoutes.NUEVA_PUBLICACION) {
+                            // Si era publicador y estaba en pantallas exclusivas pero cambió a Lector, redirigir a Inicio
+                            if (newRole == UserRole.LECTOR && (currentRoute == NavRoutes.NUEVA_PUBLICACION || currentRoute == NavRoutes.MIS_PUBLICACIONES)) {
                                 navController.navigate(NavRoutes.INICIO) {
                                     popUpTo(NavRoutes.INICIO) { inclusive = true }
                                 }
@@ -184,10 +191,30 @@ fun UDiceApp(
                     composable(NavRoutes.PERFIL) {
                         PerfilScreen(
                             currentRole = currentRole,
+                            onNavigateToMisPublicaciones = {
+                                if (currentRole == UserRole.PUBLICADOR) {
+                                    navController.navigate(NavRoutes.MIS_PUBLICACIONES)
+                                }
+                            },
+                            onNavigateToGuardados = {
+                                navController.navigate(NavRoutes.GUARDADOS)
+                            },
                             onLogout = {
                                 navController.navigate(NavRoutes.LOGIN) {
                                     popUpTo(0) { inclusive = true }
                                 }
+                            }
+                        )
+                    }
+
+                    composable(NavRoutes.GUARDADOS) {
+                        GuardadosScreen()
+                    }
+
+                    composable(NavRoutes.MIS_PUBLICACIONES) {
+                        MisPublicacionesScreen(
+                            onNavigateToNuevaPublicacion = {
+                                navController.navigate(NavRoutes.NUEVA_PUBLICACION)
                             }
                         )
                     }
