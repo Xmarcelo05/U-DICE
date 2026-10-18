@@ -62,7 +62,7 @@ fun UDiceHeader(
             ) {
                 // Logo oficial U-DICE de la universidad
                 Image(
-                    painter = painterResource(id = R.drawable.logoudicenegativo),
+                    painter = painterResource(id = R.drawable.logoblancosinfondo),
                     contentDescription = "Logo U-DICE",
                     modifier = Modifier.size(38.dp)
                 )

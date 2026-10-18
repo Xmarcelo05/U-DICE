@@ -46,7 +46,7 @@ fun UDiceApp(
 
         // Título dinámico para la cabecera institucional
         val screenTitle = when (currentRoute) {
-            NavRoutes.INICIO -> "Feed de la Facultad"
+            NavRoutes.INICIO -> "Feed de la Universidad"
             NavRoutes.PREFERENCIAS -> "Preferencias"
             NavRoutes.NUEVA_PUBLICACION -> "Nueva Publicación"
             NavRoutes.PERFIL -> "Mi Perfil"

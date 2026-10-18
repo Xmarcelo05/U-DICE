@@ -4,18 +4,8 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Fondo azul institucional UDICE -->
+    <!-- Fondo azul #016cf1 de LogoBlancoFondo.svg -->
     <path
-        android:fillColor="#1D3E87"
+        android:fillColor="#016cf1"
         android:pathData="M0,0h108v108h-108z" />
-    
-    <!-- Círculo decorativo azul oscuro -->
-    <path
-        android:fillColor="#1B3163"
-        android:pathData="M54,54m-42,0a42,42 0 1,1 84,0a42,42 0 1,1 -84,0" />
-        
-    <!-- Acento azul principal -->
-    <path
-        android:fillColor="#2563EB"
-        android:pathData="M54,54m-30,0a30,30 0 1,1 60,0a30,30 0 1,1 -60,0" />
 </vector>
