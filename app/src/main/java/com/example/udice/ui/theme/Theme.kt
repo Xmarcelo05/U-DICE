@@ -38,14 +38,14 @@ private val DarkColorScheme = darkColorScheme(
     onSecondary = Blanco,
     tertiary = AzulOscuro,
     onTertiary = Blanco,
-    background = AzulOscuro,
-    onBackground = GrisAzuladoClaro,
-    surface = AzulInstitucional,
-    onSurface = Blanco,
-    surfaceVariant = AzulOscuro,
+    background = GrisAzuladoClaro,
+    onBackground = AzulOscuro,
+    surface = Blanco,
+    onSurface = AzulOscuro,
+    surfaceVariant = Blanco,
     onSurfaceVariant = GrisPizarra,
-    outline = GrisPizarra,
-    outlineVariant = GrisPizarra
+    outline = GrisBordes,
+    outlineVariant = GrisBordes
 )
 
 @Composable

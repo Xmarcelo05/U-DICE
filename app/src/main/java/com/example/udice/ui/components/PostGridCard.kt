@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -48,7 +47,7 @@ data class GridPostItem(
     val category: String,
     val date: String,
     val icon: ImageVector,
-    val gradientColors: List<Color>,
+    val gradientColors: List<Color> = listOf(Color(0xFFF8FAFC), Color(0xFFEFF6FF)),
     val isSaved: Boolean = false,
     val views: String? = null,
     val status: String = "Publicado"
@@ -75,7 +74,7 @@ fun PostGridCard(
                 .fillMaxWidth()
                 .border(1.dp, GrisBordes, RoundedCornerShape(14.dp))
         ) {
-            // Zona visual ilustrativa (correspondiente al dibujo en boceto)
+            // Zona visual ilustrativa (Fondo claro agradable)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -88,13 +87,14 @@ fun PostGridCard(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(Blanco.copy(alpha = 0.22f)),
+                        .background(Blanco)
+                        .border(1.dp, GrisBordes, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = item.icon,
                         contentDescription = item.title,
-                        tint = Blanco,
+                        tint = AzulPrincipal,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -102,7 +102,7 @@ fun PostGridCard(
                 // Categoría en píldora superior
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = AzulOscuro.copy(alpha = 0.75f),
+                    color = AzulPrincipal,
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(6.dp)
@@ -124,7 +124,8 @@ fun PostGridCard(
                             .padding(6.dp)
                             .size(20.dp)
                             .clip(CircleShape)
-                            .background(Blanco.copy(alpha = 0.9f)),
+                            .background(Blanco)
+                            .border(1.dp, GrisBordes, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

@@ -73,7 +73,7 @@ fun GuardadosScreen(
                 category = "Evento",
                 date = "21 Sep",
                 icon = Icons.Default.Landscape,
-                gradientColors = listOf(Color(0xFF0284C7), Color(0xFF0369A1)),
+                gradientColors = listOf(Color(0xFFE0F2FE), Color(0xFFEFF6FF)),
                 isSaved = true
             ),
             GridPostItem(
@@ -82,7 +82,7 @@ fun GuardadosScreen(
                 category = "Convocatoria",
                 date = "20 Sep",
                 icon = Icons.Default.Stars,
-                gradientColors = listOf(AzulOscuro, AzulInstitucional),
+                gradientColors = listOf(Color(0xFFF8FAFC), Color(0xFFEFF6FF)),
                 isSaved = true
             ),
             GridPostItem(
@@ -91,7 +91,7 @@ fun GuardadosScreen(
                 category = "Conferencia",
                 date = "19 Sep",
                 icon = Icons.Default.Person,
-                gradientColors = listOf(Color(0xFF4338CA), Color(0xFF3730A3)),
+                gradientColors = listOf(Color(0xFFF5F3FF), Color(0xFFEFF6FF)),
                 isSaved = true
             ),
 
@@ -102,7 +102,7 @@ fun GuardadosScreen(
                 category = "Convocatoria",
                 date = "18 Sep",
                 icon = Icons.Default.Description,
-                gradientColors = listOf(Color(0xFF0D9488), Color(0xFF0F766E)),
+                gradientColors = listOf(Color(0xFFECFEFF), Color(0xFFEFF6FF)),
                 isSaved = true
             ),
             GridPostItem(
@@ -111,7 +111,7 @@ fun GuardadosScreen(
                 category = "Seminario",
                 date = "17 Sep",
                 icon = Icons.Default.ViewCompact,
-                gradientColors = listOf(AzulInstitucional, AzulPrincipal),
+                gradientColors = listOf(Color(0xFFF0FDF4), Color(0xFFEFF6FF)),
                 isSaved = true
             ),
             GridPostItem(
@@ -120,7 +120,7 @@ fun GuardadosScreen(
                 category = "Aviso",
                 date = "15 Sep",
                 icon = Icons.Default.Description,
-                gradientColors = listOf(Color(0xFF475569), Color(0xFF334155)),
+                gradientColors = listOf(Color(0xFFFEF3C7), Color(0xFFFFFBEB)),
                 isSaved = true
             ),
 
@@ -131,7 +131,7 @@ fun GuardadosScreen(
                 category = "Seminario",
                 date = "14 Sep",
                 icon = Icons.Default.Science,
-                gradientColors = listOf(Color(0xFF2563EB), Color(0xFF1D4ED8)),
+                gradientColors = listOf(Color(0xFFEFF6FF), Color(0xFFF8FAFC)),
                 isSaved = true
             ),
             GridPostItem(
@@ -140,7 +140,7 @@ fun GuardadosScreen(
                 category = "Evento",
                 date = "12 Sep",
                 icon = Icons.Default.ViewAgenda,
-                gradientColors = listOf(Color(0xFF7C3AED), Color(0xFF6D28D9)),
+                gradientColors = listOf(Color(0xFFFEF2F2), Color(0xFFEFF6FF)),
                 isSaved = true
             )
         )

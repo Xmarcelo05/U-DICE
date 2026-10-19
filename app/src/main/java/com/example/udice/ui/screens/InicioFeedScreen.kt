@@ -27,13 +27,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.udice.ui.components.PostCard
 import com.example.udice.ui.components.PostItem
 import com.example.udice.ui.theme.AzulOscuro
-import com.example.udice.ui.theme.AzulInstitucional
 import com.example.udice.ui.theme.AzulPrincipal
 import com.example.udice.ui.theme.Blanco
 import com.example.udice.ui.theme.GrisAzuladoClaro
@@ -57,7 +57,7 @@ fun InicioFeedScreen() {
                 description = "Se abren las inscripciones para las Becas de Excelencia 2026–2027. Aplica antes del 15 de octubre. Requisitos y formulario disponibles en el apartado de Becas y Ayudas en la app DBANU-Uleam.",
                 initialLikes = 213,
                 isInitiallySaved = true,
-                gradientColors = listOf(AzulOscuro, AzulInstitucional)
+                gradientColors = listOf(Color(0xFFF8FAFC), Color(0xFFEFF6FF))
             ),
             PostItem(
                 id = "2",
@@ -69,7 +69,7 @@ fun InicioFeedScreen() {
                 description = "Participa en las jornadas académicas con expositores internacionales sobre avances en biotecnología aplicada a los recursos marinos y terrestres.",
                 initialLikes = 142,
                 isInitiallySaved = false,
-                gradientColors = listOf(AzulInstitucional, AzulPrincipal)
+                gradientColors = listOf(Color(0xFFECFEFF), Color(0xFFEFF6FF))
             ),
             PostItem(
                 id = "3",
@@ -81,7 +81,7 @@ fun InicioFeedScreen() {
                 description = "Mesa redonda para debatir los desafíos éticos y las oportunidades de la IA generativa en la investigación y formación profesional universitaria.",
                 initialLikes = 98,
                 isInitiallySaved = false,
-                gradientColors = listOf(AzulOscuro, AzulPrincipal)
+                gradientColors = listOf(Color(0xFFF5F3FF), Color(0xFFEFF6FF))
             ),
             PostItem(
                 id = "4",
@@ -93,7 +93,7 @@ fun InicioFeedScreen() {
                 description = "Estudiantes y egresados presentarán sus proyectos de innovación empresarial en la plaza central de la facultad. ¡Entrada libre para todos!",
                 initialLikes = 320,
                 isInitiallySaved = false,
-                gradientColors = listOf(AzulInstitucional, AzulOscuro)
+                gradientColors = listOf(Color(0xFFFEF2F2), Color(0xFFEFF6FF))
             )
         )
     }

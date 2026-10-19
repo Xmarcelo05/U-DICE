@@ -67,7 +67,7 @@ fun MisPublicacionesScreen(
                 category = "Seminario",
                 date = "19 Sep",
                 icon = Icons.Default.ViewCompact,
-                gradientColors = listOf(AzulInstitucional, AzulPrincipal),
+                gradientColors = listOf(Color(0xFFF8FAFC), Color(0xFFEFF6FF)),
                 views = "142",
                 status = "Activo"
             ),
@@ -77,7 +77,7 @@ fun MisPublicacionesScreen(
                 category = "Convocatoria",
                 date = "17 Sep",
                 icon = Icons.Default.Description,
-                gradientColors = listOf(AzulOscuro, AzulInstitucional),
+                gradientColors = listOf(Color(0xFFECFEFF), Color(0xFFEFF6FF)),
                 views = "98",
                 status = "Activo"
             ),
@@ -87,7 +87,7 @@ fun MisPublicacionesScreen(
                 category = "Evento",
                 date = "15 Sep",
                 icon = Icons.Default.Groups,
-                gradientColors = listOf(Color(0xFF0284C7), Color(0xFF0369A1)),
+                gradientColors = listOf(Color(0xFFFEF2F2), Color(0xFFEFF6FF)),
                 views = "320",
                 status = "Activo"
             ),
@@ -99,7 +99,7 @@ fun MisPublicacionesScreen(
                 category = "Aviso",
                 date = "10 Sep",
                 icon = Icons.Default.Campaign,
-                gradientColors = listOf(Color(0xFF0D9488), Color(0xFF0F766E)),
+                gradientColors = listOf(Color(0xFFFEF3C7), Color(0xFFFFFBEB)),
                 views = "451",
                 status = "Activo"
             )
