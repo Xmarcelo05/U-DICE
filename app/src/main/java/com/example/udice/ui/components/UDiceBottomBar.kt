@@ -106,12 +106,16 @@ fun UDiceBottomBar(
                     }
                 }
 
-                // Tab Perfil
+                // Tab Perfil (activo en Perfil y en sus subsecciones Guardados y Mis Publicaciones)
+                val isPerfilSelected = currentRoute == NavRoutes.PERFIL ||
+                        currentRoute == NavRoutes.GUARDADOS ||
+                        currentRoute == NavRoutes.MIS_PUBLICACIONES
+
                 BottomNavItem(
                     label = "Perfil",
                     selectedIcon = Icons.Filled.Person,
                     unselectedIcon = Icons.Outlined.Person,
-                    isSelected = currentRoute == NavRoutes.PERFIL,
+                    isSelected = isPerfilSelected,
                     onClick = { onNavigate(NavRoutes.PERFIL) }
                 )
             }

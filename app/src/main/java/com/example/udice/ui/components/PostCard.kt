@@ -42,13 +42,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.udice.ui.theme.BorderGray
-import com.example.udice.ui.theme.DarkBlue
-import com.example.udice.ui.theme.EventRed
-import com.example.udice.ui.theme.InstitutionalBlue
-import com.example.udice.ui.theme.PrimaryBlue
-import com.example.udice.ui.theme.PureWhite
-import com.example.udice.ui.theme.SlateGray
+import com.example.udice.ui.theme.AzulInstitucional
+import com.example.udice.ui.theme.AzulOscuro
+import com.example.udice.ui.theme.AzulPrincipal
+import com.example.udice.ui.theme.Blanco
+import com.example.udice.ui.theme.ColorEvento
+import com.example.udice.ui.theme.GrisBordes
+import com.example.udice.ui.theme.GrisPizarra
 
 data class PostItem(
     val id: String,
@@ -60,7 +60,7 @@ data class PostItem(
     val description: String,
     val initialLikes: Int = 213,
     val isInitiallySaved: Boolean = false,
-    val gradientColors: List<Color> = listOf(DarkBlue, InstitutionalBlue)
+    val gradientColors: List<Color> = listOf(AzulOscuro, AzulInstitucional)
 )
 
 @Composable
@@ -75,9 +75,9 @@ fun PostCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, BorderGray, RoundedCornerShape(16.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -93,12 +93,12 @@ fun PostCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(InstitutionalBlue),
+                        .background(AzulInstitucional),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = post.authorInitial,
-                        color = PureWhite,
+                        color = Blanco,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -112,14 +112,14 @@ fun PostCard(
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = DarkBlue
+                            color = MaterialTheme.colorScheme.onSurface
                         ),
                         maxLines = 1
                     )
                     Text(
                         text = post.date,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = SlateGray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     )
@@ -134,7 +134,7 @@ fun PostCard(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Opciones",
-                        tint = SlateGray
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -159,13 +159,13 @@ fun PostCard(
                     Icon(
                         imageVector = Icons.Default.School,
                         contentDescription = null,
-                        tint = PureWhite.copy(alpha = 0.85f),
+                        tint = Blanco.copy(alpha = 0.85f),
                         modifier = Modifier.size(42.dp)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "ACTIVIDAD ACADÉMICA",
-                        color = PureWhite.copy(alpha = 0.9f),
+                        color = Blanco.copy(alpha = 0.9f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp
@@ -191,7 +191,7 @@ fun PostCard(
                     Icon(
                         imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "Me gusta",
-                        tint = if (isLiked) EventRed else SlateGray,
+                        tint = if (isLiked) ColorEvento else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -199,7 +199,7 @@ fun PostCard(
                         text = "$likesCount",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isLiked) EventRed else DarkBlue,
+                            color = if (isLiked) ColorEvento else MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.sp
                         )
                     )
@@ -210,14 +210,14 @@ fun PostCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSaved) PrimaryBlue.copy(alpha = 0.1f) else Color.Transparent)
+                        .background(if (isSaved) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
                         .clickable { isSaved = !isSaved }
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                         contentDescription = "Guardar",
-                        tint = if (isSaved) PrimaryBlue else SlateGray,
+                        tint = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -225,7 +225,7 @@ fun PostCard(
                         text = if (isSaved) "Guardado" else "Guardar",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isSaved) PrimaryBlue else SlateGray
+                            color = if (isSaved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -238,7 +238,7 @@ fun PostCard(
                 text = post.title,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = DarkBlue,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp
                 )
             )
@@ -248,7 +248,7 @@ fun PostCard(
             Text(
                 text = post.description,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = SlateGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     lineHeight = 18.sp
                 )

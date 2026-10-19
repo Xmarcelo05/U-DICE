@@ -38,18 +38,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.udice.R
 import com.example.udice.ui.components.UdiceLogo
-import com.example.udice.ui.theme.BorderGray
-import com.example.udice.ui.theme.DarkBlue
-import com.example.udice.ui.theme.LightBlueGray
-import com.example.udice.ui.theme.PrimaryBlue
-import com.example.udice.ui.theme.PureWhite
-import com.example.udice.ui.theme.SlateGray
 
 @Composable
 fun ForgotPasswordScreen(
@@ -62,7 +58,7 @@ fun ForgotPasswordScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBlueGray)
+            .background(MaterialTheme.colorScheme.background)
             .imePadding(),
         contentAlignment = Alignment.Center
     ) {
@@ -81,7 +77,7 @@ fun ForgotPasswordScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = PureWhite),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Column(
@@ -99,7 +95,7 @@ fun ForgotPasswordScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Volver",
-                                    tint = DarkBlue
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Spacer(modifier = Modifier.weight(1f))
@@ -111,10 +107,10 @@ fun ForgotPasswordScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "Recuperar Contraseña",
+                            text = stringResource(R.string.recuperar_contrasena),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = DarkBlue,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
                             )
                         )
@@ -122,7 +118,7 @@ fun ForgotPasswordScreen(
                         Text(
                             text = "Ingresa tu información para restablecer el acceso a tu cuenta",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = SlateGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
                             ),
                             modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
@@ -135,7 +131,7 @@ fun ForgotPasswordScreen(
                                     text = "Nombre de usuario o correo electrónico",
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.SemiBold,
-                                        color = DarkBlue
+                                        color = MaterialTheme.colorScheme.onSurface
                                     ),
                                     modifier = Modifier.padding(bottom = 6.dp)
                                 )
@@ -148,7 +144,7 @@ fun ForgotPasswordScreen(
                                         Icon(
                                             imageVector = Icons.Default.Email,
                                             contentDescription = null,
-                                            tint = PrimaryBlue
+                                            tint = MaterialTheme.colorScheme.primary
                                         )
                                     },
                                     singleLine = true,
@@ -156,10 +152,10 @@ fun ForgotPasswordScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = PrimaryBlue,
-                                        unfocusedBorderColor = BorderGray,
-                                        focusedLabelColor = PrimaryBlue,
-                                        cursorColor = PrimaryBlue
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                        cursorColor = MaterialTheme.colorScheme.primary
                                     )
                                 )
                             }
@@ -179,7 +175,7 @@ fun ForgotPasswordScreen(
                                     .fillMaxWidth()
                                     .height(50.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
                                 Text(
                                     text = "SIGUIENTE",
@@ -187,7 +183,7 @@ fun ForgotPasswordScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 1.sp,
                                         fontSize = 15.sp,
-                                        color = PureWhite
+                                        color = MaterialTheme.colorScheme.onPrimary
                                     )
                                 )
                             }
@@ -196,14 +192,14 @@ fun ForgotPasswordScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(PrimaryBlue.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
                                     .padding(16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "Se ha enviado un correo con instrucciones para restablecer tu contraseña.",
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = DarkBlue,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = FontWeight.Medium,
                                         textAlign = TextAlign.Center
                                     )
@@ -218,13 +214,13 @@ fun ForgotPasswordScreen(
                                     .fillMaxWidth()
                                     .height(50.dp),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
                                 Text(
                                     text = "Volver al inicio de sesión",
                                     style = MaterialTheme.typography.labelLarge.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = PureWhite
+                                        color = MaterialTheme.colorScheme.onPrimary
                                     )
                                 )
                             }
@@ -232,7 +228,7 @@ fun ForgotPasswordScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        HorizontalDivider(color = BorderGray, thickness = 1.dp)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -240,7 +236,7 @@ fun ForgotPasswordScreen(
                         Text(
                             text = "Cancelar y volver",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = SlateGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.SemiBold
                             ),
                             modifier = Modifier.clickable { onNavigateBack() }

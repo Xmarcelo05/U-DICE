@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -51,13 +52,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.udice.R
 import com.example.udice.ui.components.UdiceLogo
-import com.example.udice.ui.theme.BorderGray
-import com.example.udice.ui.theme.DarkBlue
-import com.example.udice.ui.theme.LightBlueGray
-import com.example.udice.ui.theme.PrimaryBlue
-import com.example.udice.ui.theme.PureWhite
-import com.example.udice.ui.theme.SlateGray
 
 @Composable
 fun RegisterScreen(
@@ -74,7 +70,7 @@ fun RegisterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(LightBlueGray)
+            .background(MaterialTheme.colorScheme.background)
             .imePadding(),
         contentAlignment = Alignment.Center
     ) {
@@ -93,7 +89,7 @@ fun RegisterScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = PureWhite),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Column(
@@ -111,7 +107,7 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Volver",
-                                    tint = DarkBlue
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Spacer(modifier = Modifier.weight(1f))
@@ -123,17 +119,17 @@ fun RegisterScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "Registro",
+                            text = stringResource(R.string.registro),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = DarkBlue
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         )
 
                         Text(
                             text = "Crea tu cuenta institucional universitaria",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = SlateGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
                             ),
                             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
@@ -148,17 +144,17 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.Default.Person,
                                     contentDescription = null,
-                                    tint = PrimaryBlue
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = BorderGray,
-                                focusedLabelColor = PrimaryBlue,
-                                cursorColor = PrimaryBlue
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary
                             )
                         )
 
@@ -174,7 +170,7 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.Default.Email,
                                     contentDescription = null,
-                                    tint = PrimaryBlue
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             },
                             singleLine = true,
@@ -182,10 +178,10 @@ fun RegisterScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = BorderGray,
-                                focusedLabelColor = PrimaryBlue,
-                                cursorColor = PrimaryBlue
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary
                             )
                         )
 
@@ -200,7 +196,7 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = PrimaryBlue
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             },
                             trailingIcon = {
@@ -208,7 +204,7 @@ fun RegisterScreen(
                                     Icon(
                                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                         contentDescription = if (passwordVisible) "Ocultar" else "Mostrar",
-                                        tint = SlateGray
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             },
@@ -218,10 +214,10 @@ fun RegisterScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = BorderGray,
-                                focusedLabelColor = PrimaryBlue,
-                                cursorColor = PrimaryBlue
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary
                             )
                         )
 
@@ -237,17 +233,17 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.Default.AccountBalance,
                                     contentDescription = null,
-                                    tint = PrimaryBlue
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = BorderGray,
-                                focusedLabelColor = PrimaryBlue,
-                                cursorColor = PrimaryBlue
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary
                             )
                         )
 
@@ -263,17 +259,17 @@ fun RegisterScreen(
                                 Icon(
                                     imageVector = Icons.Default.School,
                                     contentDescription = null,
-                                    tint = PrimaryBlue
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryBlue,
-                                unfocusedBorderColor = BorderGray,
-                                focusedLabelColor = PrimaryBlue,
-                                cursorColor = PrimaryBlue
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary
                             )
                         )
 
@@ -286,21 +282,21 @@ fun RegisterScreen(
                                 .fillMaxWidth()
                                 .height(50.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text(
                                 text = "Crear cuenta",
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,
-                                    color = PureWhite
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             )
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        HorizontalDivider(color = BorderGray, thickness = 1.dp)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -311,12 +307,12 @@ fun RegisterScreen(
                         ) {
                             Text(
                                 text = "¿Ya tienes cuenta? ",
-                                style = MaterialTheme.typography.bodySmall.copy(color = SlateGray)
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                             Text(
                                 text = "Inicia sesión",
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = PrimaryBlue,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold
                                 ),
                                 modifier = Modifier.clickable { onNavigateToLogin() }

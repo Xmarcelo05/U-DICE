@@ -1,3 +1,13 @@
 <resources>
-    <string name="app_name">UDICE</string>
+    <string name="app_name">U-DICE</string>
+    <string name="feed_universidad">Feed de la Universidad</string>
+    <string name="preferencias">Preferencias</string>
+    <string name="nueva_publicacion">Nueva Publicación</string>
+    <string name="perfil">Mi Perfil</string>
+    <string name="guardados">Guardados</string>
+    <string name="mis_publicaciones">Mis Publicaciones</string>
+    <string name="universidad_header">UNIVERSIDAD</string>
+    <string name="iniciar_sesion">Inicia Sesión</string>
+    <string name="registro">Registro</string>
+    <string name="recuperar_contrasena">Recuperar Contraseña</string>
 </resources>

@@ -23,8 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Landscape
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Science

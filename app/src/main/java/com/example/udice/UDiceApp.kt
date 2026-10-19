@@ -27,7 +27,6 @@ import com.example.udice.ui.screens.NuevaPublicacionScreen
 import com.example.udice.ui.screens.PerfilScreen
 import com.example.udice.ui.screens.PreferenciasScreen
 import com.example.udice.ui.screens.RegisterScreen
-import com.example.udice.ui.theme.GrisAzuladoClaro
 import com.example.udice.ui.theme.UDICETheme
 
 @Composable
@@ -48,13 +47,13 @@ fun UDiceApp(
 
         // Título dinámico para la cabecera institucional
         val screenTitle = when (currentRoute) {
-            NavRoutes.INICIO -> "Feed de la Universidad"
-            NavRoutes.PREFERENCIAS -> "Preferencias"
-            NavRoutes.NUEVA_PUBLICACION -> "Nueva Publicación"
-            NavRoutes.PERFIL -> "Mi Perfil"
-            NavRoutes.GUARDADOS -> "Guardados"
-            NavRoutes.MIS_PUBLICACIONES -> "Mis Publicaciones"
-            else -> "U-DICE"
+            NavRoutes.INICIO -> androidx.compose.ui.res.stringResource(R.string.feed_universidad)
+            NavRoutes.PREFERENCIAS -> androidx.compose.ui.res.stringResource(R.string.preferencias)
+            NavRoutes.NUEVA_PUBLICACION -> androidx.compose.ui.res.stringResource(R.string.nueva_publicacion)
+            NavRoutes.PERFIL -> androidx.compose.ui.res.stringResource(R.string.perfil)
+            NavRoutes.GUARDADOS -> androidx.compose.ui.res.stringResource(R.string.guardados)
+            NavRoutes.MIS_PUBLICACIONES -> androidx.compose.ui.res.stringResource(R.string.mis_publicaciones)
+            else -> androidx.compose.ui.res.stringResource(R.string.app_name)
         }
 
         val canGoBack = currentRoute == NavRoutes.GUARDADOS || currentRoute == NavRoutes.MIS_PUBLICACIONES
@@ -101,7 +100,7 @@ fun UDiceApp(
                     )
                 }
             },
-            containerColor = GrisAzuladoClaro
+            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background
         ) { innerPadding ->
             Box(
                 modifier = Modifier

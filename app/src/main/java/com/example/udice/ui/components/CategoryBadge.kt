@@ -12,18 +12,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.udice.ui.theme.CallGreenBg
-import com.example.udice.ui.theme.CallGreenText
-import com.example.udice.ui.theme.ConfPurpleBg
-import com.example.udice.ui.theme.ConfPurpleText
-import com.example.udice.ui.theme.EventRedBg
-import com.example.udice.ui.theme.EventRedText
-import com.example.udice.ui.theme.NoticeAmberBg
-import com.example.udice.ui.theme.NoticeAmberText
-import com.example.udice.ui.theme.OtherGrayBg
-import com.example.udice.ui.theme.OtherGrayText
-import com.example.udice.ui.theme.SeminarCyanBg
-import com.example.udice.ui.theme.SeminarCyanText
+import com.example.udice.ui.theme.ColorAvisoBg
+import com.example.udice.ui.theme.ColorAvisoTexto
+import com.example.udice.ui.theme.ColorConferenciaBg
+import com.example.udice.ui.theme.ColorConferenciaTexto
+import com.example.udice.ui.theme.ColorConvocatoria
+import com.example.udice.ui.theme.ColorConvocatoriaTexto
+import com.example.udice.ui.theme.ColorEventoBg
+import com.example.udice.ui.theme.ColorEventoTexto
+import com.example.udice.ui.theme.ColorOtroBg
+import com.example.udice.ui.theme.ColorOtroTexto
+import com.example.udice.ui.theme.ColorSeminario
+import com.example.udice.ui.theme.ColorSeminarioTexto
 
 @Composable
 fun CategoryBadge(
@@ -31,12 +31,12 @@ fun CategoryBadge(
     modifier: Modifier = Modifier
 ) {
     val (bgColor, textColor) = when (category.lowercase().trim()) {
-        "evento", "eventos" -> Pair(EventRedBg, EventRedText)
-        "convocatoria", "convocatorias" -> Pair(CallGreenBg, CallGreenText)
-        "conferencia", "conferencias" -> Pair(ConfPurpleBg, ConfPurpleText)
-        "seminario", "seminarios" -> Pair(SeminarCyanBg, SeminarCyanText)
-        "aviso", "avisos" -> Pair(NoticeAmberBg, NoticeAmberText)
-        else -> Pair(OtherGrayBg, OtherGrayText)
+        "evento", "eventos" -> Pair(ColorEventoBg, ColorEventoTexto)
+        "convocatoria", "convocatorias" -> Pair(ColorConvocatoria, ColorConvocatoriaTexto)
+        "conferencia", "conferencias" -> Pair(ColorConferenciaBg, ColorConferenciaTexto)
+        "seminario", "seminarios" -> Pair(ColorSeminario, ColorSeminarioTexto)
+        "aviso", "avisos" -> Pair(ColorAvisoBg, ColorAvisoTexto)
+        else -> Pair(ColorOtroBg, ColorOtroTexto)
     }
 
     Box(

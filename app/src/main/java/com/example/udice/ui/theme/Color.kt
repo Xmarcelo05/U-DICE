@@ -19,6 +19,7 @@ val GrisBordes = Color(0xFFE2E8F0)        // Separadores, campos de entrada y co
 // Colores Secundarios y de Estado (Categorías)
 val ColorEvento = Color(0xFFEF4444)
 val ColorEventoBg = Color(0xFFFEE2E2)
+val ColorEventoTexto = Color(0xFFDC2626)
 val ColorConvocatoria = Color(0xFFD1FAE5)
 val ColorConvocatoriaTexto = Color(0xFF065F46)
 val ColorConferencia = Color(0xFFA78BFA)
@@ -32,34 +33,6 @@ val ColorAvisoTexto = Color(0xFFB45309)
 val ColorOtro = Color(0xFF94A3B8)
 val ColorOtroBg = Color(0xFFF1F5F9)
 val ColorOtroTexto = Color(0xFF475569)
-
-// Alias para compatibilidad
-val PrimaryBlue = AzulPrincipal
-val InstitutionalBlue = AzulInstitucional
-val DarkBlue = AzulOscuro
-val LightBlueGray = GrisAzuladoClaro
-val PureWhite = Blanco
-val SlateGray = GrisPizarra
-val BorderGray = GrisBordes
-
-val EventRed = ColorEvento
-val EventRedBg = ColorEventoBg
-val EventRedText = Color(0xFFDC2626)
-val CallGreen = Color(0xFF10B981)
-val CallGreenBg = ColorConvocatoria
-val CallGreenText = ColorConvocatoriaTexto
-val ConfPurple = ColorConferencia
-val ConfPurpleBg = ColorConferenciaBg
-val ConfPurpleText = ColorConferenciaTexto
-val SeminarCyan = Color(0xFF06B6D4)
-val SeminarCyanBg = ColorSeminario
-val SeminarCyanText = ColorSeminarioTexto
-val NoticeAmber = ColorAviso
-val NoticeAmberBg = ColorAvisoBg
-val NoticeAmberText = ColorAvisoTexto
-val OtherGray = ColorOtro
-val OtherGrayBg = ColorOtroBg
-val OtherGrayText = ColorOtroTexto
 
 // Degradado institucional principal (#1B3163 -> #1D3E87 -> #2563EB)
 val HeaderGradient = Brush.horizontalGradient(
