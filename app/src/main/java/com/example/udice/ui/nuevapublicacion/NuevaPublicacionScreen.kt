@@ -35,9 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,14 +60,15 @@ import com.example.udice.ui.theme.UDICETheme
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NuevaPublicacionScreen(
-    onPublicacionExitosa: () -> Unit = {}
+    state: NuevaPublicacionUiState.Content,
+    onTituloChange: (String) -> Unit,
+    onDescripcionChange: (String) -> Unit,
+    onCategoriaChange: (String) -> Unit,
+    onToggleImage: () -> Unit,
+    onSubmit: () -> Unit,
+    onDismissSuccess: () -> Unit,
+    onPublicacionExitosa: () -> Unit
 ) {
-    var titulo by remember { mutableStateOf("") }
-    var descripcion by remember { mutableStateOf("") }
-    var selectedCategoria by remember { mutableStateOf("Evento") }
-    var hasImage by remember { mutableStateOf(false) }
-    var showDialogSuccess by remember { mutableStateOf(false) }
-
     val scrollState = rememberScrollState()
 
     val categorias = listOf(
@@ -105,8 +105,8 @@ fun NuevaPublicacionScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = titulo,
-                    onValueChange = { titulo = it },
+                    value = state.titulo,
+                    onValueChange = onTituloChange,
                     placeholder = { Text("Escribe un título para la publicación...", color = GrisPizarra.copy(alpha = 0.6f)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -131,8 +131,8 @@ fun NuevaPublicacionScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = descripcion,
-                    onValueChange = { descripcion = it },
+                    value = state.descripcion,
+                    onValueChange = onDescripcionChange,
                     placeholder = { Text("Detalla la información extracurricular...", color = GrisPizarra.copy(alpha = 0.6f)) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -164,7 +164,7 @@ fun NuevaPublicacionScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     categorias.forEach { (nombre, colorBase) ->
-                        val isSelected = selectedCategoria == nombre
+                        val isSelected = state.categoria == nombre
                         val backgroundColor = if (isSelected) colorBase else Color(0xFFF1F5F9)
                         val textColor = when {
                             isSelected && nombre == "Convocatoria" -> ColorConvocatoriaTexto
@@ -176,7 +176,7 @@ fun NuevaPublicacionScreen(
                             shape = RoundedCornerShape(20.dp),
                             color = backgroundColor,
                             border = if (isSelected) null else BorderStroke(1.dp, GrisBordes),
-                            modifier = Modifier.clickable { selectedCategoria = nombre }
+                            modifier = Modifier.clickable { onCategoriaChange(nombre) }
                         ) {
                             Text(
                                 text = nombre,
@@ -195,10 +195,10 @@ fun NuevaPublicacionScreen(
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFF8FAFC),
-                    border = BorderStroke(1.dp, if (hasImage) AzulPrincipal else GrisBordes),
+                    border = BorderStroke(1.dp, if (state.hasImage) AzulPrincipal else GrisBordes),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { hasImage = !hasImage }
+                        .clickable(onClick = onToggleImage)
                 ) {
                     Row(
                         modifier = Modifier.padding(vertical = 16.dp, horizontal = 20.dp),
@@ -206,17 +206,17 @@ fun NuevaPublicacionScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = if (hasImage) Icons.Default.CheckCircle else Icons.Default.Image,
+                            imageVector = if (state.hasImage) Icons.Default.CheckCircle else Icons.Default.Image,
                             contentDescription = "Agregar imagen",
-                            tint = if (hasImage) AzulPrincipal else GrisPizarra,
+                            tint = if (state.hasImage) AzulPrincipal else GrisPizarra,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (hasImage) "Imagen adjuntada ✓" else "Agregar imagen",
+                            text = if (state.hasImage) "Imagen adjuntada ✓" else "Agregar imagen",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (hasImage) AzulPrincipal else GrisPizarra
+                            color = if (state.hasImage) AzulPrincipal else GrisPizarra
                         )
                     }
                 }
@@ -225,12 +225,8 @@ fun NuevaPublicacionScreen(
 
                 // BOTÓN PUBLICAR
                 Button(
-                    onClick = {
-                        if (titulo.isNotBlank() && descripcion.isNotBlank()) {
-                            showDialogSuccess = true
-                        }
-                    },
-                    enabled = titulo.isNotBlank() && descripcion.isNotBlank(),
+                    onClick = onSubmit,
+                    enabled = !state.isSubmitting,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -252,7 +248,10 @@ fun NuevaPublicacionScreen(
     }
 
     // Diálogo de confirmación de publicación exitosa
-    if (showDialogSuccess) {
+    state.error?.let { message ->
+        Text(text = message, color = Color(0xFFB91C1C), modifier = Modifier.padding(horizontal = 16.dp))
+    }
+    if (state.published) {
         AlertDialog(
             onDismissRequest = { },
             icon = {
@@ -272,7 +271,7 @@ fun NuevaPublicacionScreen(
             },
             text = {
                 Text(
-                    text = "Tu publicación sobre '$titulo' ha sido difundida correctamente a la comunidad universitaria.",
+                    text = "Tu publicación sobre '${state.titulo}' ha sido difundida correctamente a la comunidad universitaria.",
                     fontSize = 14.sp,
                     color = GrisPizarra
                 )
@@ -280,12 +279,7 @@ fun NuevaPublicacionScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // Reiniciar campos al publicar
-                        titulo = ""
-                        descripcion = ""
-                        selectedCategoria = "Evento"
-                        hasImage = false
-                        showDialogSuccess = false
+                        onDismissSuccess()
                         onPublicacionExitosa()
                     }
                 ) {
@@ -298,10 +292,35 @@ fun NuevaPublicacionScreen(
     }
 }
 
+@Composable
+fun NuevaPublicacionRoute(
+    onPublicacionExitosa: () -> Unit,
+    stateHolder: NuevaPublicacionStateHolder = hiltViewModel()
+) {
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
+    when (val current = state) {
+        is NuevaPublicacionUiState.Content -> NuevaPublicacionScreen(
+            state = current,
+            onTituloChange = { stateHolder.onEvent(NuevaPublicacionEvent.TitleChanged(it)) },
+            onDescripcionChange = { stateHolder.onEvent(NuevaPublicacionEvent.DescriptionChanged(it)) },
+            onCategoriaChange = { stateHolder.onEvent(NuevaPublicacionEvent.CategorySelected(it)) },
+            onToggleImage = { stateHolder.onEvent(NuevaPublicacionEvent.ToggleImage) },
+            onSubmit = { stateHolder.onEvent(NuevaPublicacionEvent.Submit) },
+            onDismissSuccess = { stateHolder.onEvent(NuevaPublicacionEvent.DismissSuccess) },
+            onPublicacionExitosa = onPublicacionExitosa
+        )
+        NuevaPublicacionUiState.Loading -> Unit
+        is NuevaPublicacionUiState.Error -> Text(text = current.message)
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun NuevaPublicacionScreenPreview() {
     UDICETheme {
-        NuevaPublicacionScreen()
+        NuevaPublicacionScreen(
+            state = NuevaPublicacionUiState.Content(), onTituloChange = {}, onDescripcionChange = {},
+            onCategoriaChange = {}, onToggleImage = {}, onSubmit = {}, onDismissSuccess = {}, onPublicacionExitosa = {}
+        )
     }
 }

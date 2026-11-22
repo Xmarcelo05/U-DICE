@@ -18,7 +18,7 @@ import com.example.udice.ui.components.UDiceBottomBar
 import com.example.udice.ui.components.UDiceHeader
 import com.example.udice.ui.navigation.NavRoutes
 import com.example.udice.ui.navigation.UserRole
-import com.example.udice.ui.nuevapublicacion.NuevaPublicacionScreen
+import com.example.udice.ui.nuevapublicacion.NuevaPublicacionRoute
 import com.example.udice.ui.perfil.PerfilScreen
 import com.example.udice.ui.preferencias.PreferenciasScreen
 import com.example.udice.ui.theme.UDICETheme
@@ -99,7 +99,7 @@ fun UDiceApp(
                         )
                     }
                     composable(NavRoutes.NUEVA_PUBLICACION) {
-                        NuevaPublicacionScreen(
+                        NuevaPublicacionRoute(
                             onPublicacionExitosa = {
                                 navController.navigate(NavRoutes.PREFERENCIAS) {
                                     popUpTo(NavRoutes.PREFERENCIAS) { inclusive = true }
