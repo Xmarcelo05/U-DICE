@@ -1,6 +1,8 @@
 package com.example.udice.ui.perfil
 
 import androidx.lifecycle.ViewModel
+import com.example.udice.data.repository.SavedPostsRepository
+import com.example.udice.data.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +22,10 @@ sealed interface PerfilEvent {
 }
 
 @HiltViewModel
-class PerfilStateHolder @Inject constructor() : ViewModel() {
+class PerfilStateHolder @Inject constructor(
+    private val sessionRepository: SessionRepository,
+    private val savedPostsRepository: SavedPostsRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow<PerfilUiState>(PerfilUiState.Content())
     val uiState: StateFlow<PerfilUiState> = _uiState.asStateFlow()
 

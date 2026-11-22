@@ -1,6 +1,8 @@
 package com.example.udice.ui.preferencias
 
 import androidx.lifecycle.ViewModel
+import com.example.udice.data.repository.PreferencesRepository
+import com.example.udice.data.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +22,10 @@ sealed interface PreferenciasEvent {
 }
 
 @HiltViewModel
-class PreferenciasStateHolder @Inject constructor() : ViewModel() {
+class PreferenciasStateHolder @Inject constructor(
+    private val preferencesRepository: PreferencesRepository,
+    private val sessionRepository: SessionRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow<PreferenciasUiState>(PreferenciasUiState.Content())
     val uiState: StateFlow<PreferenciasUiState> = _uiState.asStateFlow()
 
