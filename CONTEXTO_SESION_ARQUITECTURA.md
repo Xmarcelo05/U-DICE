@@ -1,216 +1,120 @@
 # Contexto de Sesión de Arquitectura U-DICE
 
-Este documento resume todo el trabajo realizado en esta sesión sobre el proyecto Android **U-DICE** (Kotlin + Jetpack Compose, paquete `com.example.udice`) para que otro desarrollador o IA pueda continuar exactamente desde este punto sin perder el hilo.
+Este documento resume todo el trabajo realizado en el proyecto Android **U-DICE** (Kotlin + Jetpack Compose, paquete `com.example.udice`) para que cualquier desarrollador del equipo o IA pueda continuar exactamente desde este punto sin perder el hilo de la arquitectura ni de las decisiones técnicas.
 
 ---
 
 ## 1. Estado Actual del Repositorio Git
 
-- **Rama activa:** `3rEtapa` (creada y activa desde el inicio).
+- **Rama base:** `3rEtapa` (contiene la arquitectura base y módulos iniciales desarrollados por Fabián).
+- **Rama activa actual:** `feature/freddy-preferencias-feed` (contiene la integración de Supabase y los requisitos funcionales de Freddy).
 - **Estado del árbol de trabajo:** Limpio (`working tree clean`).
-- **Compilación verificada:** Todos los commits fueron compilados exitosamente con `./gradlew assembleDebug` previo a cada commit.
-- **Commits realizados en esta sesión (8 commits en orden):**
-
-```text
-c4eb8a3 feat(repository): implementa PreferencesRepository persistido localmente
-4677f64 feat(repository): implementa PostRepository con sincronización y validación de permisos
-ece360d feat(repository): implementa SessionRepository offline-first con Flow
-6afce1a feat(remote): crea RemoteDataSource y FakeRemoteDataSource con simulación de red
-d0c8d4a feat(local): implementa Room con entidades, DAOs, mappers y LocalDataSource
-f9253c8 feat(model): agrega modelos compartidos User, Rol, Facultad, Categoria, Alcance y Post
-8dc979e refactor(arch): organiza estructura de paquetes data, ui y di
-4aa31b6 feat(di): configura Hilt, KSP, Application, EntryPoint y calificador @IoDispatcher
-```
+- **Compilación verificada:** Todos los commits fueron compilados exitosamente con `./gradlew assembleDebug` previo a cada commit (`BUILD SUCCESSFUL`).
 
 ---
 
-## 2. Pantallas Existentes en el Proyecto
+## 2. Pantallas y Rutas Existentes en la Aplicación
 
-No se modificó el diseño visual de las pantallas existentes. Se migraron a subpaquetes dedicados dentro de `ui/`:
-1. **Preferencias** (`com.example.udice.ui.preferencias.PreferenciasScreen.kt`): Gestión de facultades y dependencias de interés con switches y control de cambios para habilitar guardado.
-2. **Nueva Publicación** (`com.example.udice.ui.nuevapublicacion.NuevaPublicacionScreen.kt`): Formulario con título, descripción, selección visual de clasificación/categoría, adjuntar imagen y diálogo de éxito.
-3. **Mi Perfil** (`com.example.udice.ui.perfil.PerfilScreen.kt`): Tarjeta de usuario con avatar, facultad, estadísticas y opciones (publicaciones, guardados, seguridad, cerrar sesión).
-4. **Navegación y Cabeceras**:
-   - `com.example.udice.UDiceApp.kt`: Contenedor principal con `NavHost`, `Scaffold`, selector dinámico de rol en el Header y BottomBar.
-   - `com.example.udice.ui.navigation.NavRoutes.kt`: Constantes de rutas (`PREFERENCIAS`, `NUEVA_PUBLICACION`, `PERFIL`).
+Todas las pantallas están ubicadas en subpaquetes dedicados dentro de `ui/`, siguiendo el patrón de separación estricta **Route / StateHolder / Composable Visual**:
+
+1. **Novedades / Feed Principal** (`com.example.udice.ui.feed.InicioFeedScreen.kt`):
+   - Ruta: `NavRoutes.INICIO_FEED` (destino inicial de la app).
+   - Feed reactivo con orden cronológico descendente (`fecha DESC`).
+   - Filtro horizontal por chips de categoría (Todos, Eventos, Convocatorias, Conferencias, Avisos, Otros).
+   - Filtro dinámico según las facultades activas en las preferencias del usuario.
+   - Componente `PostCard` con autor, avatar, badges, conjunto de reacciones interactivas y botón de marcador.
+2. **Preferencias** (`com.example.udice.ui.preferencias.PreferenciasScreen.kt`):
+   - Ruta: `NavRoutes.PREFERENCIAS`.
+   - Gestión de facultades y dependencias campus con switches reactivos.
+   - Control de cambios (`hasChanges`) para habilitar guardado, persistencia en Room/Supabase y diálogo de confirmación.
+3. **Nueva Publicación** (`com.example.udice.ui.nuevapublicacion.NuevaPublicacionScreen.kt`):
+   - Ruta: `NavRoutes.NUEVA_PUBLICACION` (visible solo para rol `ASO`).
+   - Formulario de creación con validación, selección de categoría y confirmación.
+4. **Mi Perfil** (`com.example.udice.ui.perfil.PerfilScreen.kt`):
+   - Ruta: `NavRoutes.PERFIL`.
+   - Tarjeta de usuario con estadísticas y opciones de cierre de sesión.
+5. **Componentes y Navegación Compartida**:
+   - `com.example.udice.UDiceApp.kt`: `Scaffold` con `NavHost`, `UDiceHeader` y `UDiceBottomBar`.
+   - `com.example.udice.ui.navigation.NavRoutes.kt`: Constantes `INICIO_FEED`, `PREFERENCIAS`, `NUEVA_PUBLICACION`, `PERFIL`.
    - `com.example.udice.ui.components.UDiceHeader.kt` y `UDiceBottomBar.kt`.
 
 ---
 
-## 3. Resumen Detallado de lo Realizado (Módulos 1 al 8)
+## 3. Resumen de lo Realizado por Fabián (Módulos 1 al 14 en `3rEtapa`)
 
 ### Módulo 1: Hilt, KSP y Dispatchers.IO (`commit 4aa31b6`)
-- **Plugins y Dependencias:** Configurado Hilt (`2.55`), KSP (`2.2.10-2.0.2`), `hilt-navigation-compose` (`1.2.0`) y `lifecycle-runtime-compose`.
-- **Application Class:** Creada `com.example.udice.UDiceApplication` con `@HiltAndroidApp` y registrada en `AndroidManifest.xml`.
-- **MainActivity:** Anotada con `@AndroidEntryPoint`.
-- **Concurrencia:** Creado `@IoDispatcher` (anotación Qualifier) y `CoroutinesModule` en `com.example.udice.di` proveyendo `Dispatchers.IO`.
-- **Ajustes de compatibilidad AGP 9.3:** En `gradle.properties` se añadieron `android.newDsl=false` y `android.disallowKotlinSourceSets=false` para habilitar el funcionamiento de Hilt y KSP con la versión 9.3 del Android Gradle Plugin.
+- Hilt (`2.55`), KSP (`2.2.10-2.0.2`), `hilt-navigation-compose` (`1.2.0`).
+- `UDiceApplication` con `@HiltAndroidApp`, `MainActivity` con `@AndroidEntryPoint`.
+- Calificador `@IoDispatcher` y `CoroutinesModule` proveyendo `Dispatchers.IO`.
 
 ### Módulo 2: Estructura de Paquetes (`commit 8dc979e`)
-- Creada estructura limpia:
-  - `com.example.udice.data` (`model`, `local`, `remote`, `repository`)
-  - `com.example.udice.ui` (un subpaquete por pantalla: `nuevapublicacion`, `perfil`, `preferencias`, además de `components`, `navigation`, `theme`)
-  - `com.example.udice.di`
+- Separación limpia: `data` (`local`, `model`, `remote`, `repository`), `ui` (subpaquetes por pantalla) y `di`.
 
 ### Módulo 3: Modelos Compartidos de Dominio (`commit f9253c8`)
-Ubicados en `com.example.udice.data.model`:
-- `Rol.kt`: Enum `LECTOR`, `ASO`.
-- `Facultad.kt`: Enum con las 8 dependencias/facultades del campus y métodos de resolución por nombre.
-- `Categoria.kt`: Enum `EVENTO`, `CONVOCATORIA`, `CONFERENCIA`, `AVISO`, `OTRO`.
-- `Alcance.kt`: Enum `GENERAL`, `CARRERA`.
-- `User.kt`: `data class User(id, nombre, email, rol, facultad, carrera)`.
-- `Post.kt`: `data class Post(id, autorId, autorNombre, titulo, descripcion, categoria, facultad, alcance, carrera?, fecha, imageUrl?)`.
+- `Rol.kt` (`LECTOR`, `ASO`), `Facultad.kt` (8 dependencias del campus), `Categoria.kt`, `Alcance.kt`, `User.kt` y `Post.kt`.
 
 ### Módulo 4: Fuente Local Room y LocalDataSource (`commit d0c8d4a`)
-Ubicados en `com.example.udice.data.local`:
-- **Entidades:** `PostEntity`, `UserEntity`, `PreferenceEntity`, `SavedPostEntity`.
-- **DAOs:** `PostDao`, `UserDao`, `PreferenceDao`, `SavedPostDao` con consultas optimizadas y `Flow`.
-- **Base de Datos:** `UDiceDatabase : RoomDatabase()`. Se utilizó Room `2.8.4` para compatibilidad completa con el motor KSP2.
-- **Mappers:** Funciones de extensión bidireccionales `toDomain()` y `toEntity()` para `Post` y `User`.
-- **LocalDataSource:** Interfaz y su implementación `RoomLocalDataSource` inyectando `@IoDispatcher private val ioDispatcher: CoroutineDispatcher` y ejecutando cada operación con `withContext(ioDispatcher)` y `flowOn(ioDispatcher)`.
+- Entidades `PostEntity`, `UserEntity`, `PreferenceEntity`, `SavedPostEntity`.
+- DAOs correspondientes y base de datos `UDiceDatabase`.
+- `RoomLocalDataSource` ejecutando operaciones con `withContext(ioDispatcher)`.
 
 ### Módulo 5: Fuente Remota y FakeRemoteDataSource (`commit 6afce1a`)
-Ubicados en `com.example.udice.data.remote`:
-- **Interfaz `RemoteDataSource`:** Métodos suspend para operaciones CRUD de `Post`, consulta de usuarios, gestión de preferencias y posts guardados.
-- **Implementación `FakeRemoteDataSource`:**
-  - Simula latencia de red real con `delay(500)`.
-  - Operaciones seguras en memoria usando `Mutex` y `withContext(ioDispatcher)`.
-  - Datos precargados: cuenta `ASO` ("user-aso-1"), cuenta `LECTOR` ("user-lector-1"), 5 publicaciones representativas con diversas categorías y preferencias predeterminadas.
+- Interfaz `RemoteDataSource` y `FakeRemoteDataSource` con retardo simulado (`delay(500)`).
 
-### Módulo 6: SessionRepository Offline-First (`commit ece360d`)
-Ubicado en `com.example.udice.data.repository`:
-- **Interfaz `SessionRepository`:** `val currentUser: Flow<User?>`, `getCurrentUser()`, `switchUser(userId)`, `updateRole(newRole)`, `syncUsers()`, `logout()`.
-- **Implementación `SessionRepositoryImpl`:** Recibe `LocalDataSource`, `RemoteDataSource` e `ioDispatcher` por constructor. Room es la fuente única de verdad para la sesión activa.
+### Módulos 6 al 10: Repositorios y DI Singleton (`commits ece360d` a `a57408b`)
+- `SessionRepository`, `PostRepository`, `PreferencesRepository`, `SavedPostsRepository`.
+- Módulos Hilt: `DatabaseModule`, `DataSourceModule`, `RepositoryModule`.
 
-### Módulo 7: PostRepository con Validación y Sincronización (`commit 4677f64`)
-Ubicado en `com.example.udice.data.repository`:
-- **Interfaz `PostRepository`:** `posts: Flow<List<Post>>`, `observePost(id): Flow<Post?>`, `getPostById(id)`, `syncPosts()`, `createPost(post)`, `updatePost(post)`, `deletePost(id)`.
-- **Implementación `PostRepositoryImpl`:**
-  - Cero lógica en UI: las validaciones de rol y autoría residen dentro del repositorio usando `SessionRepository`.
-  - `createPost`: Valida que el usuario tenga rol `Rol.ASO`. Inyecta `autorId` y `autorNombre`. Sincroniza en remoto y persiste en Room.
-  - `updatePost` y `deletePost`: Validan rol `Rol.ASO` y autoría (`post.autorId == currentUser.id`).
-  - `syncPosts`: Descarga de remoto y actualiza la fuente local Room.
-
-### Módulo 8: PreferencesRepository (`commit c4eb8a3`)
-Ubicado en `com.example.udice.data.repository`:
-- **Interfaz `PreferencesRepository`:** `observePreferences(userId): Flow<Map<String, Boolean>>`, `getPreferences(userId)`, `updatePreferences(userId, preferences)`, `syncPreferences(userId)`.
-- **Implementación `PreferencesRepositoryImpl`:** Persistencia offline-first en Room (`PreferenceEntity`) y sincronización bidireccional con el data source remoto.
+### Módulos 11 al 14: Semilla, State Holders y TODOs (`commits 2050887` a `54fb84c`)
+- `SeedDataCallback` para datos en frío offline.
+- State holders esqueleto y patrón de referencia en `NuevaPublicacion`.
+- Inserción de comentarios estructurados `// TODO(RF n)` para desarrollo paralelo.
 
 ---
 
-## 4. Tareas Pendientes para la Próxima IA (Módulos 9 al 14)
+## 4. Sesión de Trabajo de Freddy Marcelo Bravo Ponce (en `feature/freddy-preferencias-feed`)
 
-La siguiente IA debe continuar con los módulos restantes, manteniendo la regla de **un commit por módulo**, **compilación previa verificada (`./gradlew assembleDebug`)** y **mensajes descriptivos en español**:
+### 1. Infraestructura Supabase (Optimización para Plan Gratuito)
+- **Esquema SQL (`supabase_schema.sql`):**
+  - Tabla `admin_users`: Usuario inicial `admin@uleam.edu.ec` para altas, bajas y reseteo de cuentas de facultades.
+  - Tabla `facultades_cuentas`: Cuentas publicadoras de las facultades (1 por facultad, rol `ASO`). Se simplificó retirando `carrera` ya que no aplica a nivel de facultad.
+  - Tabla `usuarios`: Lectores (estudiantes, profesores) con su respectiva facultad y carrera.
+  - Tablas `publicaciones`, `reacciones` y `preferencias_usuarios`.
+  - Índices en `fecha DESC`, `facultad` y `categoria` para optimizar consultas del feed sin agotar cuotas.
+- **Cliente HTTP y Data Source:**
+  - `SupabaseConfig`: Base URL y Publishable Key segura (la Secret Key se mantiene fuera del repositorio/cliente).
+  - `SupabaseHttpClient`: Cliente asíncrono con `HttpURLConnection` y `ioDispatcher`.
+  - `SupabaseRemoteDataSource`: Implementa `RemoteDataSource` con fallback automático a Room / `FakeRemoteDataSource` ante caídas de red (*offline-first*).
 
-### Módulo 9: `SavedPostsRepository`
-- **Archivos a crear en `com.example.udice.data.repository`:**
-  - `SavedPostsRepository.kt` (interfaz):
-    - `fun observeSavedPostIds(userId: String): Flow<Set<String>>`
-    - `fun observeSavedPosts(userId: String): Flow<List<Post>>`
-    - `fun isPostSaved(userId: String, postId: String): Flow<Boolean>`
-    - `suspend fun toggleSavePost(userId: String, postId: String): Result<Boolean>`
-    - `suspend fun syncSavedPosts(userId: String): Result<Unit>`
-  - `SavedPostsRepositoryImpl.kt` (implementación):
-    - Inyectar `LocalDataSource`, `RemoteDataSource`, `@IoDispatcher ioDispatcher`.
-    - Conectar con `savedPostDao` a través de `LocalDataSource`.
-- **Commit:** `feat(repository): implementa SavedPostsRepository con Flow para publicaciones guardadas`
+### 2. RF 3 y RF 5 · Preferencias y Alcance Local
+- `PreferenciasStateHolder`: Inyecta `PreferencesRepository` y `SessionRepository`.
+  - Expone `PreferenciasUiState` (sellado), detecta reactivamente `hasChanges` comparando con la base de datos, maneja `isSaving`, guardado y cancelación.
+- `PreferenciasScreen`: Composable visual 100% desacoplado sin instancias de ViewModel.
+- `PreferenciasRoute`: Conecta `hiltViewModel()` con `collectAsStateWithLifecycle()`.
 
-### Módulo 10: Módulos Hilt en `di`
-- **Archivos a crear en `com.example.udice.di`:**
-  - `DatabaseModule.kt`:
-    - `@Provides @Singleton fun provideDatabase(@ApplicationContext context: Context): UDiceDatabase`
-    - `@Provides fun providePostDao(db: UDiceDatabase): PostDao`
-    - `@Provides fun provideUserDao(db: UDiceDatabase): UserDao`
-    - `@Provides fun providePreferenceDao(db: UDiceDatabase): PreferenceDao`
-    - `@Provides fun provideSavedPostDao(db: UDiceDatabase): SavedPostDao`
-  - `DataModule.kt` (o `DataSourceModule.kt`):
-    - `@Binds @Singleton abstract fun bindLocalDataSource(impl: RoomLocalDataSource): LocalDataSource`
-    - `@Binds @Singleton abstract fun bindRemoteDataSource(impl: FakeRemoteDataSource): RemoteDataSource`
-  - `RepositoryModule.kt`:
-    - `@Binds @Singleton abstract fun bindSessionRepository(impl: SessionRepositoryImpl): SessionRepository`
-    - `@Binds @Singleton abstract fun bindPostRepository(impl: PostRepositoryImpl): PostRepository`
-    - `@Binds @Singleton abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository`
-    - `@Binds @Singleton abstract fun bindSavedPostsRepository(impl: SavedPostsRepositoryImpl): SavedPostsRepository`
-- **Commit:** `feat(di): agrega modulos Hilt para Room, DataSources y Repositorios con scope Singleton`
+### 3. RF 9 · Reacciones Predefinidas
+- Modelo de dominio `TipoReaccion` (`ME_GUSTA`, `UTIL`, `IMPORTANTE`, `INTERESANTE`), `Reaccion` y `ReaccionSummary`.
+- Persistencia local: `ReaccionEntity`, `ReaccionDao` y migración a versión 2 de `UDiceDatabase`.
+- Repositorio: `ReactionsRepository` y `ReactionsRepositoryImpl` con sincronización bidireccional en Supabase.
+- Tarjeta de publicación (`PostCard`): Permite alternar la reacción del usuario y refleja los conteos reactivos.
 
-### Módulo 11: Datos Semilla (Local y Remoto)
-- Asegurar que al arrancar en frío sin internet, Room tenga datos iniciales:
-  - Crear un inicializador o callback Room (`RoomDatabase.Callback`) que inserte la cuenta ASO, la cuenta LECTOR y avisos iniciales en `UserDao` y `PostDao`.
-- **Commit:** `feat(data): agrega datos semilla en base de datos local y sincronizacion inicial`
-
-### Módulo 12: State Holders Esqueleto
-- Crear `<Pantalla>StateHolder.kt` con `@HiltViewModel`, `UiState` sellado, `StateFlow` y eventos para cada pantalla existente:
-  - `PreferenciasStateHolder.kt` en `ui.preferencias`
-  - `PerfilStateHolder.kt` en `ui.perfil`
-  - `NuevaPublicacionStateHolder.kt` en `ui.nuevapublicacion`
-- Cada uno con lógica mínima y TODOs claros.
-- **Commit:** `feat(ui): crea state holders esqueleto con UiState y eventos para pantallas existentes`
-
-### Módulo 13: Patrón de Ejemplo Completo en `NuevaPublicacion`
-- En `NuevaPublicacion`:
-  - `NuevaPublicacionStateHolder.kt`: Manejo completo de validación (título/descripción no vacíos), verificación de rol `ASO`, llamada a `postRepository.createPost()`, estados `Loading`, `Success`, `Error`.
-  - `NuevaPublicacionRoute` composable: obtiene `hiltViewModel<NuevaPublicacionStateHolder>()`, consume estado con `collectAsStateWithLifecycle()` y pasa al composable visual SOLO estado estable y lambdas `() -> Unit`.
-  - Composable hijo `NuevaPublicacionScreen`: CERO referencias a ViewModel, solo pinta UI y despacha lambdas.
-- **Commit:** `feat(ui): implementa patron de arquitectura completo en NuevaPublicacion`
-
-### Módulo 14: TODOs Claros (`// TODO(RF n)`) para Trabajo Paralelo de 4 Personas
-- Añadir comentarios estructurados `// TODO(RF n): ...`:
-  - RF 1 / RF 2: Login y Registro
-  - RF 3: Feed y filtrado por preferencias
-  - RF 4: Reacciones / Me gusta
-  - RF 5: Guardados / Bookmarks
-  - RF 6: Detalle de publicación
-  - RF 7: Preferencias
-  - RF 8: Navegación y control de roles
-- **Commit:** `docs(arch): agrega TODOs arquitecturales para modulos paralelos de desarrollo`
+### 4. RF 6 y RF 13 · Feed Cronológico y Filtros por Preferencias y Categorías
+- `InicioFeedStateHolder`:
+  - Combina flujos de publicaciones, preferencias de facultades del usuario, reacciones y publicaciones guardadas.
+  - Orden cronológico descendente estricto por timestamp de fecha (`it.fecha`).
+  - Filtro automático según las facultades marcadas como activas en las preferencias del usuario.
+  - Filtro por chips horizontales de categorías.
+- `PostCard`: Componente reutilizable con iniciales del autor, badges temáticos, reacciones y guardado.
+- `InicioFeedScreen` e `InicioFeedRoute`: Consumo seguro con Compose y estado vacío amigable.
+- Integración en `UDiceApp.kt` y `UDiceBottomBar.kt` como pantalla de inicio.
 
 ---
 
-## 5. Reglas de Arquitectura Mandatorias a Recordar
-
-1. **Inyección de dependencias SOLO mediante Hilt:** Prohibido `AppContainer` o fábricas manuales.
-2. **Ningún composable hijo referencia un ViewModel:** Solo la función `@Composable` de ruta de cada pantalla obtiene `hiltViewModel()`. Desde ahí desciende únicamente estado inmutable y callbacks `() -> Unit`.
-3. **Un `<Pantalla>StateHolder.kt` por pantalla:** Contiene el `@HiltViewModel`, `UiState` (sellado) y eventos.
-4. **Cero lógica en la UI:** Las vistas solo pintan datos y reenvían eventos.
-5. **Dos fuentes de datos:** Room como fuente única de verdad local y `RemoteDataSource` con `FakeRemoteDataSource`.
-6. **Concurrencia:** Lectura y escritura en background usando `@IoDispatcher` inyectado.
-7. **Inyección de interfaces:** Repositorios y ViewModels siempre reciben interfaces por constructor `@Inject constructor`.
-8. **Git:** Cada módulo debe compilar limpiamente con `./gradlew assembleDebug` antes de hacer commit. No hacer push ni merge.
-
----
-
-## Estado actualizado al 22-11-2026
-
-La lista de pendientes de los módulos 9–14 incluida arriba era el plan al iniciar esta continuación. Ya se ejecutaron esos módulos en la rama `3rEtapa`; el historial final está al final de este documento. No se hizo push ni merge.
-
-### Pantallas identificadas
-
-Las rutas actuales siguen siendo **Preferencias**, **Nueva Publicación** y **Mi Perfil**. `UDiceHeader` y `UDiceBottomBar` son componentes compartidos, no pantallas. No se rediseñó el aspecto de ninguna pantalla.
-
-### Commits de esta continuación y archivos
-
-- `03f5c3e feat(repository): agrega SavedPostsRepository offline-first`: `SavedPostsRepository.kt`, `SavedPostsRepositoryImpl.kt`.
-- `a57408b feat(di): configura bindings singleton para datos y repositorios`: `DatabaseModule.kt`, `DataSourceModule.kt`, `RepositoryModule.kt`.
-- `2050887 feat(data): agrega datos semilla locales para uso offline`: `SeedDataCallback.kt`, actualización de `DatabaseModule.kt`.
-- `095b206 feat(ui): crea state holders para pantallas existentes`: `NuevaPublicacionStateHolder.kt`, `PerfilStateHolder.kt`, `PreferenciasStateHolder.kt`.
-- `dab5c66 feat(ui): conecta Nueva Publicacion con state holder y repositorio`: actualización de `UDiceApp.kt`, `NuevaPublicacionScreen.kt` y `NuevaPublicacionStateHolder.kt`.
-- `019f923 docs(arch): agrega TODOs funcionales para trabajo paralelo`: actualización de `UDiceApp.kt`, `NavRoutes.kt`, y state holders de Perfil y Nueva Publicación.
-- `54fb84c fix(arch): inyecta contratos en state holders restantes`: actualización de state holders de Preferencias y Perfil; la cuenta ASO queda activa en la semilla.
-
-Cada commit se creó después de una ejecución exitosa de `./gradlew assembleDebug`. El commit `54fb84c` es una corrección de cierre posterior a los seis módulos planeados.
-
-### Estado de arquitectura para quien continúe
-
-- Hilt/KSP, Room, data sources, repositorios y `@IoDispatcher` están configurados por constructor y módulos Hilt con scope `Singleton`.
-- Room es la fuente local e incluye semilla offline con dos cuentas y publicaciones. La cuenta ASO es la sesión inicial.
-- `NuevaPublicacionRoute` obtiene su state holder con `hiltViewModel()`, recoge `StateFlow` con `collectAsStateWithLifecycle()` y pasa estado/eventos a la UI. Validación, autorización y publicación están en el state holder/repositorio.
-- Preferencias y Perfil tienen state holders con interfaces inyectadas, UiState sellado y eventos, pero siguen siendo esqueletos. Sus pantallas aún no están conectadas a esos holders; falta migrarlas al patrón de ruta y retirar estado/acciones locales antes de considerar centralizado todo el estado de pantalla.
-- El selector de rol y decisiones de navegación existentes siguen en `UDiceApp.kt`; `TODO(RF 8)` marca su integración futura con `SessionRepository`.
-- Los TODOs RF 1–8 orientan login, registro, feed, reacciones, guardados, detalle, preferencias y navegación/roles.
-
-### Historial final
+## 5. Historial Completo de Commits en `feature/freddy-preferencias-feed`
 
 ```text
+e57f7a9 refactor(supabase): ajusta esquema y data source retirando campo carrera de facultades y publicaciones
+5e3cb4b docs(context): documenta sesion de trabajo de Freddy con RF 3, 5, 6, 9 y 13
 72caa66 feat(feed): implementa InicioFeedScreen, InicioFeedStateHolder y PostCard con reacciones y filtros por preferencia (RF 6, RF 9 y RF 13)
 b155615 feat(reactions): implementa modelo de reacciones predefinidas, Room DAO y ReactionsRepository (RF 9)
 5914c7c feat(ui): implementa PreferenciasStateHolder y PreferenciasRoute con persistencia local y remota (RF 3 y RF 5)
@@ -236,30 +140,18 @@ f9253c8 feat(model): agrega modelos compartidos User, Rol, Facultad, Categoria, 
 
 ---
 
-## 6. Sesión de Trabajo — Freddy Marcelo Bravo Ponce (feature/freddy-preferencias-feed)
+## 6. Pautas para el Siguiente Desarrollador
 
-### Tareas Asignadas y Desarrolladas:
-1. **Infraestructura Supabase y Optimización de Cuota:**
-   - Creación del esquema SQL (`supabase_schema.sql`) con tablas `admin_users` (credenciales para gestión de facultades), `facultades_cuentas`, `publicaciones`, `reacciones` e `preferencias_usuarios`.
-   - Índices creados para evitar escaneos secuenciales y proteger la cuota del plan gratuito de Supabase.
-   - Implementación de `SupabaseConfig`, `SupabaseHttpClient` y `SupabaseRemoteDataSource` delegando I/O a `@IoDispatcher`.
-   - Soporte de fallback offline contra Room / `FakeRemoteDataSource` para garantizar resiliencia y funcionamiento sin conexión.
+### Integrante: Leandro Jesus Veliz Ponce (Sesión y Permisos)
+- **RF 1 & RF 2 (Registro y Login):** Conectar `RegisterScreen` y `LoginScreen` con sus StateHolders y `SessionRepository`.
+- **RF 4 (Cierre de Sesión):** Conectar opción en `PerfilScreen` invocando `sessionRepository.logout()` y limpiando la pila de navegación.
+- **RF 8 (Navegación y Roles):** Eliminar el selector de rol manual en `UDiceHeader` y asociar la navegación reactivamente a `SessionRepository.currentUser`. Proteger `NavRoutes.NUEVA_PUBLICACION` para que solo cuentas con rol `ASO` puedan ingresar.
 
-2. **RF 3 & RF 5 · Preferencias y Alcance Local:**
-   - `PreferenciasStateHolder`: Inyecta `PreferencesRepository` y `SessionRepository`. Gestiona estado sellado `PreferenciasUiState`, detección reactiva de cambios (`hasChanges`), guardado asíncrono (`isSaving`) y revertido al cancelar.
-   - `PreferenciasScreen`: Refactorizada para cumplir State Hoisting estricto (cero referencias a ViewModel o StateHolder).
-   - `PreferenciasRoute`: Obtiene `hiltViewModel()`, colecta estado con `collectAsStateWithLifecycle()` y conecta callbacks de UI.
-
-3. **RF 9 · Reacciones Predefinidas:**
-   - Modelo de dominio `TipoReaccion` (`ME_GUSTA`, `UTIL`, `IMPORTANTE`, `INTERESANTE`) y `ReaccionSummary`.
-   - Persistencia local offline con `ReaccionEntity`, `ReaccionDao` y migración a versión 2 de `UDiceDatabase`.
-   - `ReactionsRepository` y `ReactionsRepositoryImpl` con sincronización bidireccional en Supabase.
-   - Interacción reactiva en tarjetas de publicación con toggle y conteo.
-
-4. **RF 6 & RF 13 · Feed Cronológico y Filtros por Preferencias y Categorías:**
-   - `InicioFeedStateHolder`: Combina flujos reactivos de publicaciones, preferencias de usuario, reacciones y publicaciones guardadas.
-   - Orden cronológico estricto descendente (`it.fecha`).
-   - Filtrado dinámico por facultades habilitadas en las preferencias del usuario y por chips de categorías.
-   - `PostCard`: Componente desacoplado que renderiza el aviso, iniciales de facultad, fecha formateada, badges de categoría/facultad, conjunto de reacciones con conteo y botón de marcador.
-   - Integración completa de navegación en `UDiceApp.kt`, `NavRoutes.INICIO_FEED` y `UDiceBottomBar.kt`.
-
+### Integrante 4: (Bóveda y Detalle de Publicación)
+- **RF 10 & RF 11 (Guardados):** Conectar `GuardadosScreen` observando `SavedPostsRepository.observeSavedPosts(userId)` para listar publicaciones marcadas.
+- **RF 12 (Detalle Completo):** Crear ruta `NavRoutes.DETALLE_PUBLICACION + "/{postId}"` para ver la publicación en vista completa.
+- **Evidencias para el Informe Word:** Tomar capturas de pantalla de:
+  1. Consumo de StateFlow con `collectAsStateWithLifecycle()` en composables de ruta.
+  2. State Hoisting en `PostCard` o `PreferenciasScreen`.
+  3. Repositorio delegado a `@IoDispatcher`.
+  4. Módulos Hilt en `di/`.
