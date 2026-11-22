@@ -20,7 +20,7 @@ import com.example.udice.ui.navigation.NavRoutes
 import com.example.udice.ui.navigation.UserRole
 import com.example.udice.ui.nuevapublicacion.NuevaPublicacionRoute
 import com.example.udice.ui.perfil.PerfilScreen
-import com.example.udice.ui.preferencias.PreferenciasScreen
+import com.example.udice.ui.preferencias.PreferenciasRoute
 import com.example.udice.ui.theme.UDICETheme
 
 @Composable
@@ -86,13 +86,13 @@ fun UDiceApp(
                     startDestination = NavRoutes.PREFERENCIAS
                 ) {
                     composable(NavRoutes.PREFERENCIAS) {
-                        PreferenciasScreen(
-                            onGuardarClick = {
+                        PreferenciasRoute(
+                            onGuardarExitoso = {
                                 navController.navigate(NavRoutes.PREFERENCIAS) {
                                     popUpTo(NavRoutes.PREFERENCIAS) { inclusive = true }
                                 }
                             },
-                            onCancelarClick = {
+                            onCancelar = {
                                 navController.navigate(NavRoutes.PREFERENCIAS) {
                                     popUpTo(NavRoutes.PREFERENCIAS) { inclusive = true }
                                 }

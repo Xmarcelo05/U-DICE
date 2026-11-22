@@ -2,6 +2,7 @@ package com.example.udice.ui.preferencias
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,23 +10,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.udice.ui.theme.AzulPrincipal
 import com.example.udice.ui.theme.Blanco
 import com.example.udice.ui.theme.GrisAzuladoClaro
@@ -41,38 +48,65 @@ import com.example.udice.ui.theme.GrisPizarra
 import com.example.udice.ui.theme.UDICETheme
 
 @Composable
-fun PreferenciasScreen(
-    onGuardarClick: () -> Unit,
-    onCancelarClick: () -> Unit
+fun PreferenciasRoute(
+    onGuardarExitoso: () -> Unit,
+    onCancelar: () -> Unit,
+    stateHolder: PreferenciasStateHolder = hiltViewModel()
 ) {
-    // Mapa de preferencias iniciales (según prototipo)
-    val initialPreferences = remember {
-        mapOf(
-            "Ciencias de la Vida y Tecnologías" to true,
-            "Ciencias de la Salud" to true,
-            "Ingeniería, Industria y Construcción" to false,
-            "Facultad de Ciencias Administrativas, Contables y Comercio" to false,
-            "Facultad de Educación, Turismo, Artes y Humanidades" to false,
-            "Facultad de Ciencias Sociales, Derecho y Bienestar" to false,
-            "Bienestar Universitario" to true,
-            "Instituto de Idiomas" to false
-        )
-    }
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
 
-    // Estado editable de switches
-    val preferencesState = remember {
-        mutableStateMapOf<String, Boolean>().apply {
-            putAll(initialPreferences)
+    when (val current = state) {
+        is PreferenciasUiState.Content -> {
+            PreferenciasScreen(
+                state = current,
+                onToggle = { key, enabled ->
+                    stateHolder.onEvent(PreferenciasEvent.Toggle(key, enabled))
+                },
+                onGuardarClick = {
+                    stateHolder.onEvent(PreferenciasEvent.Save)
+                },
+                onCancelarClick = {
+                    stateHolder.onEvent(PreferenciasEvent.Cancel)
+                    onCancelar()
+                },
+                onDismissSuccess = {
+                    stateHolder.onEvent(PreferenciasEvent.DismissSuccess)
+                    onGuardarExitoso()
+                }
+            )
+        }
+        PreferenciasUiState.Loading -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(GrisAzuladoClaro),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = AzulPrincipal)
+            }
+        }
+        is PreferenciasUiState.Error -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(GrisAzuladoClaro)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = current.message, color = Color.Red)
+            }
         }
     }
+}
 
-    // El botón Guardar se habilita SOLO si hay cambios
-    val hasChanges by remember {
-        derivedStateOf {
-            preferencesState.any { (key, value) -> initialPreferences[key] != value }
-        }
-    }
-
+@Composable
+fun PreferenciasScreen(
+    state: PreferenciasUiState.Content,
+    onToggle: (String, Boolean) -> Unit,
+    onGuardarClick: () -> Unit,
+    onCancelarClick: () -> Unit,
+    onDismissSuccess: () -> Unit
+) {
     val scrollState = rememberScrollState()
 
     Column(
@@ -93,7 +127,7 @@ fun PreferenciasScreen(
             ) {
                 // SECCIÓN FACULTADES
                 Text(
-                    text = "FACULTADES",
+                    text = "FACULTADES DE INTERÉS (RF 3)",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = GrisPizarra,
@@ -111,9 +145,9 @@ fun PreferenciasScreen(
                 ).forEachIndexed { index, facultad ->
                     PreferenceSwitchRow(
                         title = facultad,
-                        checked = preferencesState[facultad] ?: false,
+                        checked = state.preferences[facultad] ?: false,
                         onCheckedChange = { checked ->
-                            preferencesState[facultad] = checked
+                            onToggle(facultad, checked)
                         }
                     )
                     if (index < 5) {
@@ -126,9 +160,9 @@ fun PreferenciasScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // SECCIÓN OTROS
+                // SECCIÓN OTROS / ALCANCE GENERAL (RF 5)
                 Text(
-                    text = "OTROS",
+                    text = "DEPENDENCIAS Y SERVICIOS CAMPUS (RF 5)",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = GrisPizarra,
@@ -142,9 +176,9 @@ fun PreferenciasScreen(
                 ).forEachIndexed { index, otro ->
                     PreferenceSwitchRow(
                         title = otro,
-                        checked = preferencesState[otro] ?: false,
+                        checked = state.preferences[otro] ?: false,
                         onCheckedChange = { checked ->
-                            preferencesState[otro] = checked
+                            onToggle(otro, checked)
                         }
                     )
                     if (index < 1) {
@@ -164,10 +198,10 @@ fun PreferenciasScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Botón Guardar (Deshabilitado si no hay cambios)
+            // Botón Guardar (Deshabilitado si no hay cambios o si está guardando)
             Button(
                 onClick = onGuardarClick,
-                enabled = hasChanges,
+                enabled = state.hasChanges && !state.isSaving,
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp),
@@ -178,16 +212,25 @@ fun PreferenciasScreen(
                     disabledContentColor = GrisPizarra
                 )
             ) {
-                Text(
-                    text = "Guardar",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
+                if (state.isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Blanco,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "Guardar",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
             }
 
             // Botón Cancelar
             OutlinedButton(
                 onClick = onCancelarClick,
+                enabled = !state.isSaving,
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp),
@@ -204,6 +247,43 @@ fun PreferenciasScreen(
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Diálogo de éxito al guardar
+        if (state.saveSuccess) {
+            AlertDialog(
+                onDismissRequest = onDismissSuccess,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Éxito",
+                        tint = AzulPrincipal,
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Preferencias Guardadas",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = AzulPrincipal
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Tus facultades y dependencias de interés se han actualizado y sincronizado correctamente.",
+                        fontSize = 14.sp,
+                        color = GrisPizarra
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = onDismissSuccess) {
+                        Text("Aceptar", fontWeight = FontWeight.Bold, color = AzulPrincipal)
+                    }
+                },
+                containerColor = Blanco,
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
     }
 }
 
@@ -246,8 +326,11 @@ private fun PreferenceSwitchRow(
 fun PreferenciasScreenPreview() {
     UDICETheme {
         PreferenciasScreen(
+            state = PreferenciasUiState.Content(),
+            onToggle = { _, _ -> },
             onGuardarClick = {},
-            onCancelarClick = {}
+            onCancelarClick = {},
+            onDismissSuccess = {}
         )
     }
 }
