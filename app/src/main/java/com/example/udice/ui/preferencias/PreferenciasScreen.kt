@@ -1,4 +1,4 @@
-package com.example.udice.ui.screens
+package com.example.udice.ui.preferencias
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

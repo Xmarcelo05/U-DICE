@@ -1,4 +1,4 @@
-package com.example.udice.ui.screens
+package com.example.udice.ui.nuevapublicacion
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

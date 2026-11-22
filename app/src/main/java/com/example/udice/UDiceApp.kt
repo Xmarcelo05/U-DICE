@@ -18,9 +18,9 @@ import com.example.udice.ui.components.UDiceBottomBar
 import com.example.udice.ui.components.UDiceHeader
 import com.example.udice.ui.navigation.NavRoutes
 import com.example.udice.ui.navigation.UserRole
-import com.example.udice.ui.screens.NuevaPublicacionScreen
-import com.example.udice.ui.screens.PerfilScreen
-import com.example.udice.ui.screens.PreferenciasScreen
+import com.example.udice.ui.nuevapublicacion.NuevaPublicacionScreen
+import com.example.udice.ui.perfil.PerfilScreen
+import com.example.udice.ui.preferencias.PreferenciasScreen
 import com.example.udice.ui.theme.UDICETheme
 
 @Composable
