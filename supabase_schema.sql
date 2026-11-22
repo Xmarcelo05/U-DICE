@@ -91,6 +91,18 @@ CREATE INDEX IF NOT EXISTS idx_reacciones_post ON reacciones (publicacion_id);
 CREATE INDEX IF NOT EXISTS idx_preferencias_usuario ON preferencias_usuarios (usuario_id);
 
 -- ====================================================================
+-- POLÍTICAS DE ACCESO PARA APP MÓVIL (U-DICE)
+-- ====================================================================
+ALTER TABLE IF EXISTS publicaciones DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS reacciones DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS preferencias_usuarios DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS facultades_cuentas DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS usuarios DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS admin_users DISABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS publicaciones ADD COLUMN IF NOT EXISTS carrera VARCHAR(100);
+
+-- ====================================================================
 -- DATOS SEMILLA (Admin por defecto y Facultades iniciales ULEAM)
 -- ====================================================================
 -- Admin inicial (contraseña hash demostrativa sha256 de 'admin123' o para auth)
