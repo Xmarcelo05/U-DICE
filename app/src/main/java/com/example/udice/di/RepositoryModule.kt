@@ -14,4 +14,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindPostRepository(impl: PostRepositoryImpl): PostRepository
     @Binds @Singleton abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
     @Binds @Singleton abstract fun bindSavedPostsRepository(impl: SavedPostsRepositoryImpl): SavedPostsRepository
+    @Binds @Singleton abstract fun bindReactionsRepository(impl: ReactionsRepositoryImpl): ReactionsRepository
 }

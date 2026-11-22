@@ -6,6 +6,7 @@ import com.example.udice.data.local.UDiceDatabase
 import com.example.udice.data.local.SeedDataCallback
 import com.example.udice.data.local.dao.PostDao
 import com.example.udice.data.local.dao.PreferenceDao
+import com.example.udice.data.local.dao.ReaccionDao
 import com.example.udice.data.local.dao.SavedPostDao
 import com.example.udice.data.local.dao.UserDao
 import dagger.Module
@@ -21,6 +22,7 @@ object DatabaseModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext context: Context): UDiceDatabase =
         Room.databaseBuilder(context, UDiceDatabase::class.java, "udice.db")
+            .fallbackToDestructiveMigration(true)
             .addCallback(SeedDataCallback())
             .build()
 
@@ -28,4 +30,5 @@ object DatabaseModule {
     @Provides fun provideUserDao(db: UDiceDatabase): UserDao = db.userDao()
     @Provides fun providePreferenceDao(db: UDiceDatabase): PreferenceDao = db.preferenceDao()
     @Provides fun provideSavedPostDao(db: UDiceDatabase): SavedPostDao = db.savedPostDao()
+    @Provides fun provideReaccionDao(db: UDiceDatabase): ReaccionDao = db.reaccionDao()
 }
