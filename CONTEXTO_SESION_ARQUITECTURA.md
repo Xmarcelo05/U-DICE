@@ -211,6 +211,12 @@ Cada commit se creó después de una ejecución exitosa de `./gradlew assembleDe
 ### Historial final
 
 ```text
+72caa66 feat(feed): implementa InicioFeedScreen, InicioFeedStateHolder y PostCard con reacciones y filtros por preferencia (RF 6, RF 9 y RF 13)
+b155615 feat(reactions): implementa modelo de reacciones predefinidas, Room DAO y ReactionsRepository (RF 9)
+5914c7c feat(ui): implementa PreferenciasStateHolder y PreferenciasRoute con persistencia local y remota (RF 3 y RF 5)
+4a3785e feat(remote): implementa SupabaseRemoteDataSource y SupabaseHttpClient con fallback offline
+25d735b fix(supabase): deshabilita RLS en tablas publicas para acceso desde app movil
+8edf275 feat(supabase): agrega esquema SQL con tablas de admin, facultades, publicaciones, reacciones y preferencias
 54fb84c fix(arch): inyecta contratos en state holders restantes
 019f923 docs(arch): agrega TODOs funcionales para trabajo paralelo
 dab5c66 feat(ui): conecta Nueva Publicacion con state holder y repositorio
@@ -227,3 +233,33 @@ f9253c8 feat(model): agrega modelos compartidos User, Rol, Facultad, Categoria, 
 8dc979e refactor(arch): organiza estructura de paquetes data, ui y di
 4aa31b6 feat(di): configura Hilt, KSP, Application, EntryPoint y calificador @IoDispatcher
 ```
+
+---
+
+## 6. Sesión de Trabajo — Freddy Marcelo Bravo Ponce (feature/freddy-preferencias-feed)
+
+### Tareas Asignadas y Desarrolladas:
+1. **Infraestructura Supabase y Optimización de Cuota:**
+   - Creación del esquema SQL (`supabase_schema.sql`) con tablas `admin_users` (credenciales para gestión de facultades), `facultades_cuentas`, `publicaciones`, `reacciones` e `preferencias_usuarios`.
+   - Índices creados para evitar escaneos secuenciales y proteger la cuota del plan gratuito de Supabase.
+   - Implementación de `SupabaseConfig`, `SupabaseHttpClient` y `SupabaseRemoteDataSource` delegando I/O a `@IoDispatcher`.
+   - Soporte de fallback offline contra Room / `FakeRemoteDataSource` para garantizar resiliencia y funcionamiento sin conexión.
+
+2. **RF 3 & RF 5 · Preferencias y Alcance Local:**
+   - `PreferenciasStateHolder`: Inyecta `PreferencesRepository` y `SessionRepository`. Gestiona estado sellado `PreferenciasUiState`, detección reactiva de cambios (`hasChanges`), guardado asíncrono (`isSaving`) y revertido al cancelar.
+   - `PreferenciasScreen`: Refactorizada para cumplir State Hoisting estricto (cero referencias a ViewModel o StateHolder).
+   - `PreferenciasRoute`: Obtiene `hiltViewModel()`, colecta estado con `collectAsStateWithLifecycle()` y conecta callbacks de UI.
+
+3. **RF 9 · Reacciones Predefinidas:**
+   - Modelo de dominio `TipoReaccion` (`ME_GUSTA`, `UTIL`, `IMPORTANTE`, `INTERESANTE`) y `ReaccionSummary`.
+   - Persistencia local offline con `ReaccionEntity`, `ReaccionDao` y migración a versión 2 de `UDiceDatabase`.
+   - `ReactionsRepository` y `ReactionsRepositoryImpl` con sincronización bidireccional en Supabase.
+   - Interacción reactiva en tarjetas de publicación con toggle y conteo.
+
+4. **RF 6 & RF 13 · Feed Cronológico y Filtros por Preferencias y Categorías:**
+   - `InicioFeedStateHolder`: Combina flujos reactivos de publicaciones, preferencias de usuario, reacciones y publicaciones guardadas.
+   - Orden cronológico estricto descendente (`it.fecha`).
+   - Filtrado dinámico por facultades habilitadas en las preferencias del usuario y por chips de categorías.
+   - `PostCard`: Componente desacoplado que renderiza el aviso, iniciales de facultad, fecha formateada, badges de categoría/facultad, conjunto de reacciones con conteo y botón de marcador.
+   - Integración completa de navegación en `UDiceApp.kt`, `NavRoutes.INICIO_FEED` y `UDiceBottomBar.kt`.
+
