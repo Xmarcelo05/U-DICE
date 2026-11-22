@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS admin_users (
 CREATE TABLE IF NOT EXISTS facultades_cuentas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     facultad TEXT NOT NULL, -- Ej: 'INGENIERIA_SISTEMAS', 'MEDICINA', etc.
-    carrera TEXT,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     nombre_contacto TEXT NOT NULL,
@@ -53,7 +52,6 @@ CREATE TABLE IF NOT EXISTS publicaciones (
     categoria VARCHAR(50) NOT NULL, -- 'EVENTO', 'CONVOCATORIA', 'CONFERENCIA', 'AVISO', 'OTRO'
     facultad VARCHAR(100) NOT NULL,
     alcance VARCHAR(20) NOT NULL DEFAULT 'GENERAL', -- 'GENERAL' o 'CARRERA'
-    carrera VARCHAR(100),
     fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     image_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -100,8 +98,6 @@ ALTER TABLE IF EXISTS facultades_cuentas DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS usuarios DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS admin_users DISABLE ROW LEVEL SECURITY;
 
-ALTER TABLE IF EXISTS publicaciones ADD COLUMN IF NOT EXISTS carrera VARCHAR(100);
-
 -- ====================================================================
 -- DATOS SEMILLA (Admin por defecto y Facultades iniciales ULEAM)
 -- ====================================================================
@@ -110,10 +106,10 @@ INSERT INTO admin_users (email, password_hash, nombre, rol)
 VALUES ('admin@uleam.edu.ec', crypt('admin123', gen_salt('bf')), 'Administrador Central U-DICE', 'ADMIN')
 ON CONFLICT (email) DO NOTHING;
 
--- Facultades representativas de la ULEAM
-INSERT INTO facultades_cuentas (facultad, carrera, email, password_hash, nombre_contacto, rol)
+-- Facultades representativas de la ULEAM (1 cuenta por facultad)
+INSERT INTO facultades_cuentas (facultad, email, password_hash, nombre_contacto, rol)
 VALUES 
-    ('FACCI', 'Ingeniería de Software', 'facci@uleam.edu.ec', crypt('facci2026', gen_salt('bf')), 'Asociación FACCI', 'ASO'),
-    ('MEDICINA', 'Medicina General', 'medicina@uleam.edu.ec', crypt('medicina2026', gen_salt('bf')), 'Comisión Académica Medicina', 'ASO'),
-    ('EDUCACION', 'Pedagogía', 'educacion@uleam.edu.ec', crypt('educacion2026', gen_salt('bf')), 'Coordinación Educación', 'ASO')
+    ('FACCI', 'facci@uleam.edu.ec', crypt('facci2026', gen_salt('bf')), 'Asociación FACCI', 'ASO'),
+    ('MEDICINA', 'medicina@uleam.edu.ec', crypt('medicina2026', gen_salt('bf')), 'Comisión Académica Medicina', 'ASO'),
+    ('EDUCACION', 'educacion@uleam.edu.ec', crypt('educacion2026', gen_salt('bf')), 'Coordinación Educación', 'ASO')
 ON CONFLICT (email) DO NOTHING;

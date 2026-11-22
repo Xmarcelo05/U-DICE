@@ -95,7 +95,6 @@ class SupabaseRemoteDataSource @Inject constructor(
             put("categoria", post.categoria.name)
             put("facultad", post.facultad.displayName)
             put("alcance", post.alcance.name)
-            if (post.carrera != null) put("carrera", post.carrera)
             if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
         val result = client.post("publicaciones", json.toString())
@@ -118,7 +117,6 @@ class SupabaseRemoteDataSource @Inject constructor(
             put("categoria", post.categoria.name)
             put("facultad", post.facultad.displayName)
             put("alcance", post.alcance.name)
-            if (post.carrera != null) put("carrera", post.carrera)
             if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
         val result = client.patch("publicaciones", "id=eq.${post.id}", json.toString())
