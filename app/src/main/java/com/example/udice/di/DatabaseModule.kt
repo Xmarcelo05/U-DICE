@@ -3,6 +3,7 @@ package com.example.udice.di
 import android.content.Context
 import androidx.room.Room
 import com.example.udice.data.local.UDiceDatabase
+import com.example.udice.data.local.SeedDataCallback
 import com.example.udice.data.local.dao.PostDao
 import com.example.udice.data.local.dao.PreferenceDao
 import com.example.udice.data.local.dao.SavedPostDao
@@ -19,7 +20,9 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext context: Context): UDiceDatabase =
-        Room.databaseBuilder(context, UDiceDatabase::class.java, "udice.db").build()
+        Room.databaseBuilder(context, UDiceDatabase::class.java, "udice.db")
+            .addCallback(SeedDataCallback())
+            .build()
 
     @Provides fun providePostDao(db: UDiceDatabase): PostDao = db.postDao()
     @Provides fun provideUserDao(db: UDiceDatabase): UserDao = db.userDao()
