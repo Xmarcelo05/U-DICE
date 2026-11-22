@@ -25,6 +25,7 @@ class PerfilStateHolder @Inject constructor() : ViewModel() {
     val uiState: StateFlow<PerfilUiState> = _uiState.asStateFlow()
 
     fun onEvent(event: PerfilEvent) {
-        // TODO(RF 1): Conectar el perfil con sesión, guardados y navegación.
+        // TODO(RF 5): Conectar el conteo y acceso a guardados con SavedPostsRepository.
+        // TODO(RF 8): Ejecutar cierre de sesión mediante SessionRepository.
     }
 }

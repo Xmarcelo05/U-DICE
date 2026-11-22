@@ -58,6 +58,7 @@ class NuevaPublicacionStateHolder @Inject constructor(
     }
 
     private fun submit(form: NuevaPublicacionUiState.Content) {
+        // TODO(RF 6): Emitir navegación al detalle de la publicación creada.
         if (form.titulo.isBlank() || form.descripcion.isBlank()) {
             _uiState.value = form.copy(error = "Completa el título y la descripción.")
             return

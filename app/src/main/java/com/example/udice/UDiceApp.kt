@@ -30,6 +30,7 @@ fun UDiceApp(
     UDICETheme {
         val navController = rememberNavController()
         var currentRole by remember { mutableStateOf(initialRole) }
+        // TODO(RF 8): Vincular navegación y permisos al usuario de SessionRepository.
 
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route ?: NavRoutes.PREFERENCIAS
