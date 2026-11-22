@@ -13,8 +13,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,15 +53,23 @@ fun UDiceBottomBar(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Tab 1: Preferencias
+            // Tab 1: Inicio / Feed (RF 6)
+            BottomNavItem(
+                label = "Inicio",
+                icon = Icons.Default.Home,
+                isSelected = currentRoute == NavRoutes.INICIO_FEED,
+                onClick = { onNavigate(NavRoutes.INICIO_FEED) }
+            )
+
+            // Tab 2: Preferencias (RF 3)
             BottomNavItem(
                 label = "Preferencias",
-                icon = Icons.Default.Settings,
+                icon = Icons.Default.Tune,
                 isSelected = currentRoute == NavRoutes.PREFERENCIAS,
                 onClick = { onNavigate(NavRoutes.PREFERENCIAS) }
             )
 
-            // Tab 2: Nueva Publicación (Solo si el rol es PUBLICADOR)
+            // Tab Central: Nueva Publicación (Solo si el rol es PUBLICADOR)
             if (currentRole == UserRole.PUBLICADOR) {
                 Box(
                     modifier = Modifier

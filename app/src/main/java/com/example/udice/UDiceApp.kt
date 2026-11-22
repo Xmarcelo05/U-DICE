@@ -16,6 +16,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.udice.ui.components.UDiceBottomBar
 import com.example.udice.ui.components.UDiceHeader
+import com.example.udice.ui.feed.InicioFeedRoute
 import com.example.udice.ui.navigation.NavRoutes
 import com.example.udice.ui.navigation.UserRole
 import com.example.udice.ui.nuevapublicacion.NuevaPublicacionRoute
@@ -33,10 +34,11 @@ fun UDiceApp(
         // TODO(RF 8): Vincular navegación y permisos al usuario de SessionRepository.
 
         val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route ?: NavRoutes.PREFERENCIAS
+        val currentRoute = navBackStackEntry?.destination?.route ?: NavRoutes.INICIO_FEED
 
         // Título dinámico según la ruta
         val screenTitle = when (currentRoute) {
+            NavRoutes.INICIO_FEED -> "U-DICE · Novedades"
             NavRoutes.PREFERENCIAS -> "Preferencias"
             NavRoutes.NUEVA_PUBLICACION -> "Nueva Publicación"
             NavRoutes.PERFIL -> "Mi Perfil"
@@ -51,10 +53,10 @@ fun UDiceApp(
                     onRoleToggle = {
                         val newRole = if (currentRole == UserRole.PUBLICADOR) UserRole.LECTOR else UserRole.PUBLICADOR
                         currentRole = newRole
-                        // Si era publicador y estaba en Nueva Publicación pero cambió a Lector, redirigir a Preferencias
+                        // Si era publicador y estaba en Nueva Publicación pero cambió a Lector, redirigir al Feed
                         if (newRole == UserRole.LECTOR && currentRoute == NavRoutes.NUEVA_PUBLICACION) {
-                            navController.navigate(NavRoutes.PREFERENCIAS) {
-                                popUpTo(NavRoutes.PREFERENCIAS) { inclusive = true }
+                            navController.navigate(NavRoutes.INICIO_FEED) {
+                                popUpTo(NavRoutes.INICIO_FEED) { inclusive = true }
                             }
                         }
                     }
@@ -66,7 +68,7 @@ fun UDiceApp(
                     currentRole = currentRole,
                     onNavigate = { route ->
                         navController.navigate(route) {
-                            popUpTo(NavRoutes.PREFERENCIAS) {
+                            popUpTo(NavRoutes.INICIO_FEED) {
                                 saveState = true
                             }
                             launchSingleTop = true
@@ -83,18 +85,21 @@ fun UDiceApp(
             ) {
                 NavHost(
                     navController = navController,
-                    startDestination = NavRoutes.PREFERENCIAS
+                    startDestination = NavRoutes.INICIO_FEED
                 ) {
+                    composable(NavRoutes.INICIO_FEED) {
+                        InicioFeedRoute()
+                    }
                     composable(NavRoutes.PREFERENCIAS) {
                         PreferenciasRoute(
                             onGuardarExitoso = {
-                                navController.navigate(NavRoutes.PREFERENCIAS) {
-                                    popUpTo(NavRoutes.PREFERENCIAS) { inclusive = true }
+                                navController.navigate(NavRoutes.INICIO_FEED) {
+                                    popUpTo(NavRoutes.INICIO_FEED) { inclusive = true }
                                 }
                             },
                             onCancelar = {
-                                navController.navigate(NavRoutes.PREFERENCIAS) {
-                                    popUpTo(NavRoutes.PREFERENCIAS) { inclusive = true }
+                                navController.navigate(NavRoutes.INICIO_FEED) {
+                                    popUpTo(NavRoutes.INICIO_FEED) { inclusive = true }
                                 }
                             }
                         )
@@ -102,8 +107,8 @@ fun UDiceApp(
                     composable(NavRoutes.NUEVA_PUBLICACION) {
                         NuevaPublicacionRoute(
                             onPublicacionExitosa = {
-                                navController.navigate(NavRoutes.PREFERENCIAS) {
-                                    popUpTo(NavRoutes.PREFERENCIAS) { inclusive = true }
+                                navController.navigate(NavRoutes.INICIO_FEED) {
+                                    popUpTo(NavRoutes.INICIO_FEED) { inclusive = true }
                                 }
                             }
                         )
