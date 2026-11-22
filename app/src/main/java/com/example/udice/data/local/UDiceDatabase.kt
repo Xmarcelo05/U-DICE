@@ -21,7 +21,7 @@ import com.example.udice.data.local.entity.UserEntity
         SavedPostEntity::class,
         ReaccionEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class UDiceDatabase : RoomDatabase() {

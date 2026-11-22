@@ -8,8 +8,7 @@ Este documento resume todo el trabajo realizado en el proyecto Android **U-DICE*
 
 - **Rama base:** `3rEtapa` (contiene la arquitectura base y módulos iniciales desarrollados por Fabián).
 - **Rama activa actual:** `feature/freddy-preferencias-feed` (contiene la integración de Supabase y los requisitos funcionales de Freddy).
-- **Estado del árbol de trabajo:** Limpio (`working tree clean`).
-- **Compilación verificada:** Todos los commits fueron compilados exitosamente con `./gradlew assembleDebug` previo a cada commit (`BUILD SUCCESSFUL`).
+- **Cambios de la sesión actual:** RF 1, 2, 4 y 8 e insets de navegación del sistema.
 
 ---
 
@@ -18,7 +17,7 @@ Este documento resume todo el trabajo realizado en el proyecto Android **U-DICE*
 Todas las pantallas están ubicadas en subpaquetes dedicados dentro de `ui/`, siguiendo el patrón de separación estricta **Route / StateHolder / Composable Visual**:
 
 1. **Novedades / Feed Principal** (`com.example.udice.ui.feed.InicioFeedScreen.kt`):
-   - Ruta: `NavRoutes.INICIO_FEED` (destino inicial de la app).
+   - Ruta: `NavRoutes.INICIO_FEED` (destino inicial después de autenticar).
    - Feed reactivo con orden cronológico descendente (`fecha DESC`).
    - Filtro horizontal por chips de categoría (Todos, Eventos, Convocatorias, Conferencias, Avisos, Otros).
    - Filtro dinámico según las facultades activas en las preferencias del usuario.
@@ -32,10 +31,10 @@ Todas las pantallas están ubicadas en subpaquetes dedicados dentro de `ui/`, si
    - Formulario de creación con validación, selección de categoría y confirmación.
 4. **Mi Perfil** (`com.example.udice.ui.perfil.PerfilScreen.kt`):
    - Ruta: `NavRoutes.PERFIL`.
-   - Tarjeta de usuario con estadísticas y opciones de cierre de sesión.
+   - Perfil de la cuenta activa con acceso a Mis publicaciones para ASO y opción de cerrar sesión.
 5. **Componentes y Navegación Compartida**:
    - `com.example.udice.UDiceApp.kt`: `Scaffold` con `NavHost`, `UDiceHeader` y `UDiceBottomBar`.
-   - `com.example.udice.ui.navigation.NavRoutes.kt`: Constantes `INICIO_FEED`, `PREFERENCIAS`, `NUEVA_PUBLICACION`, `PERFIL`.
+   - `com.example.udice.ui.navigation.NavRoutes.kt`: Rutas del feed, preferencias, nueva publicación, perfil y mis publicaciones. La sesión determina si se muestra el formulario de acceso o el grafo privado.
    - `com.example.udice.ui.components.UDiceHeader.kt` y `UDiceBottomBar.kt`.
 
 ---
@@ -86,7 +85,7 @@ Todas las pantallas están ubicadas en subpaquetes dedicados dentro de `ui/`, si
   - `SupabaseHttpClient`: Cliente asíncrono con `HttpURLConnection` y `ioDispatcher`.
   - `SupabaseRemoteDataSource`: Implementa `RemoteDataSource` con fallback automático a Room / `FakeRemoteDataSource` ante caídas de red (*offline-first*).
 
-### 2. RF 3 y RF 5 · Preferencias y Alcance Local
+### 2. RF 3 · Preferencias de facultad
 - `PreferenciasStateHolder`: Inyecta `PreferencesRepository` y `SessionRepository`.
   - Expone `PreferenciasUiState` (sellado), detecta reactivamente `hasChanges` comparando con la base de datos, maneja `isSaving`, guardado y cancelación.
 - `PreferenciasScreen`: Composable visual 100% desacoplado sin instancias de ViewModel.
@@ -140,18 +139,28 @@ f9253c8 feat(model): agrega modelos compartidos User, Rol, Facultad, Categoria, 
 
 ---
 
-## 6. Pautas para el Siguiente Desarrollador
+## 6. Sesión, permisos y publicaciones propias
 
-### Integrante: Leandro Jesus Veliz Ponce (Sesión y Permisos)
-- **RF 1 & RF 2 (Registro y Login):** Conectar `RegisterScreen` y `LoginScreen` con sus StateHolders y `SessionRepository`.
-- **RF 4 (Cierre de Sesión):** Conectar opción en `PerfilScreen` invocando `sessionRepository.logout()` y limpiando la pila de navegación.
-- **RF 8 (Navegación y Roles):** Eliminar el selector de rol manual en `UDiceHeader` y asociar la navegación reactivamente a `SessionRepository.currentUser`. Proteger `NavRoutes.NUEVA_PUBLICACION` para que solo cuentas con rol `ASO` puedan ingresar.
+- **RF 1 · Registro.** `AuthScreen` solicita nombre, correo, contraseña, facultad y carrera. `AuthStateHolder` delega a `SessionRepository`, que valida y registra cuentas lectoras locales en Room. Las contraseñas se verifican con PBKDF2-HMAC-SHA256 y sal individual. La migración 2 → 3 agrega las columnas de credenciales y limpia las sesiones de la versión anterior.
+- **RF 2 · Inicio de sesión.** `SessionRepository.currentUser` es la fuente de verdad de sesión y rol. `UDiceApp` monta el grafo privado cuando hay una sesión activa. El acceso local funciona sin conexión. La autenticación institucional y la provisión de cuentas ASO para producción quedan pendientes de integración con Supabase Auth y políticas de autorización del servidor.
+- **RF 4 · Cierre de sesión.** La cabecera de todas las pantallas principales y Perfil exponen la acción. El repositorio limpia la sesión de Room y Compose retira el grafo privado. Preferencias, reacciones y marcadores del feed se consultan con el ID de la cuenta activa.
+- **RF 8 · Mis publicaciones.** Desde Perfil, una cuenta ASO puede listar sus avisos, editar título, descripción y categoría, y confirmar la eliminación. `PostRepositoryImpl` comprueba el rol y la autoría antes de editar o eliminar. Room propaga los cambios al feed y a la lista propia. Los avisos de la cuenta ASO de demostración se gestionan localmente.
+- **Barra inferior.** `UDiceBottomBar` aplica `navigationBarsPadding()` para reservar el espacio que Android reporta en modo gestual o de tres botones. `Scaffold` entrega el padding al contenido, que lo consume para evitar duplicarlo en destinos hijos.
 
-### Integrante 4: (Bóveda y Detalle de Publicación)
-- **RF 10 & RF 11 (Guardados):** Conectar `GuardadosScreen` observando `SavedPostsRepository.observeSavedPosts(userId)` para listar publicaciones marcadas.
-- **RF 12 (Detalle Completo):** Crear ruta `NavRoutes.DETALLE_PUBLICACION + "/{postId}"` para ver la publicación en vista completa.
-- **Evidencias para el Informe Word:** Tomar capturas de pantalla de:
-  1. Consumo de StateFlow con `collectAsStateWithLifecycle()` en composables de ruta.
-  2. State Hoisting en `PostCard` o `PreferenciasScreen`.
-  3. Repositorio delegado a `@IoDispatcher`.
-  4. Módulos Hilt en `di/`.
+### Diseño de acceso
+
+`LoginScreen` y `RegisterScreen` recuperan las tarjetas, los iconos y el logotipo de `fixed-experimental`. El botón de acceso valida las credenciales y el rol proviene de la cuenta. Registro usa el selector de facultades y ambos formularios muestran los resultados de `AuthStateHolder`.
+
+### Comprobación manual en Android Studio
+
+1. Ejecutar la variante `debug`. Registrar un lector, volver al login y probar una contraseña incorrecta y luego la correcta. Revisar que el lector ve Inicio, Preferencias y Perfil.
+2. Cerrar sesión desde la cabecera y pulsar Atrás. Entrar con la cuenta de demostración `aso.sistemas@universidad.edu` y la contraseña `UDiceDemo2026!`. Esta cuenta de prueba está habilitada únicamente en `debug`.
+3. Abrir Perfil → Mis publicaciones. Editar un aviso de demostración y comprobar el cambio en el feed. Eliminar un aviso y comprobar que desaparece de ambos sitios. Cerrar la app y volver a abrirla para comprobar la persistencia.
+4. Revisar Inicio, Preferencias, Perfil y Nueva publicación con navegación por gestos y por tres botones. Comprobar que se pueden tocar todas las opciones en vertical y horizontal.
+
+### Pendientes de la etapa
+
+- **RF 5.** Guardar y aplicar el alcance general o específico de la carrera. La pantalla actual guarda facultades de interés.
+- **RF 10 y RF 11.** Completar la pantalla de bóveda sobre `SavedPostsRepository.observeSavedPosts(userId)`. El marcador ya está conectado en el feed.
+- **RF 12.** Añadir la ruta con el detalle completo del aviso.
+- **Evidencias del Word.** Capturar los paquetes, la recolección de `StateFlow` con ciclo de vida, los repositorios con el dispatcher de IO y los módulos de Hilt.

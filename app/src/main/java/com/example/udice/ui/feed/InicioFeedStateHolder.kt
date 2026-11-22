@@ -12,7 +12,11 @@ import com.example.udice.data.repository.ReactionsRepository
 import com.example.udice.data.repository.SavedPostsRepository
 import com.example.udice.data.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -58,16 +62,13 @@ class InicioFeedStateHolder @Inject constructor(
 
     private val selectedCategory = MutableStateFlow("Todos")
     private val isRefreshing = MutableStateFlow(false)
-    private var currentUserId: String = "user-lector-1"
 
     init {
         viewModelScope.launch {
-            val user = sessionRepository.getCurrentUser()
-            currentUserId = user?.id ?: "user-lector-1"
-            // Sincronizar en frío
+            val user = sessionRepository.getCurrentUser() ?: return@launch
             postRepository.syncPosts()
             reactionsRepository.syncReactions()
-            preferencesRepository.syncPreferences(currentUserId)
+            preferencesRepository.syncPreferences(user.id)
         }
     }
 
@@ -75,11 +76,11 @@ class InicioFeedStateHolder @Inject constructor(
         category to refreshing
     }
 
-    val uiState: StateFlow<InicioFeedUiState> = combine(
+    private fun feedFor(userId: String): Flow<InicioFeedUiState> = combine(
         postRepository.posts,
-        preferencesRepository.observePreferences(currentUserId),
-        reactionsRepository.observeAllReactions(currentUserId),
-        savedPostsRepository.observeSavedPostIds(currentUserId),
+        preferencesRepository.observePreferences(userId),
+        reactionsRepository.observeAllReactions(userId),
+        savedPostsRepository.observeSavedPostIds(userId),
         filterFlow
     ) { posts, preferences, reactionsMap, savedIds, filter ->
         val category = filter.first
@@ -132,11 +133,16 @@ class InicioFeedStateHolder @Inject constructor(
             selectedCategory = category,
             isRefreshing = refreshing
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = InicioFeedUiState.Loading
-    )
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<InicioFeedUiState> = sessionRepository.currentUser
+        .flatMapLatest { user -> if (user == null) flowOf(InicioFeedUiState.Loading) else feedFor(user.id) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = InicioFeedUiState.Loading
+        )
 
     fun onEvent(event: InicioFeedEvent) {
         when (event) {
@@ -145,12 +151,14 @@ class InicioFeedStateHolder @Inject constructor(
             }
             is InicioFeedEvent.ToggleReaction -> {
                 viewModelScope.launch {
-                    reactionsRepository.toggleReaction(event.postId, currentUserId, event.tipo)
+                    val user = sessionRepository.getCurrentUser() ?: return@launch
+                    reactionsRepository.toggleReaction(event.postId, user.id, event.tipo)
                 }
             }
             is InicioFeedEvent.ToggleSave -> {
                 viewModelScope.launch {
-                    savedPostsRepository.toggleSavePost(currentUserId, event.postId)
+                    val user = sessionRepository.getCurrentUser() ?: return@launch
+                    savedPostsRepository.toggleSavePost(user.id, event.postId)
                 }
             }
             InicioFeedEvent.Refresh -> {

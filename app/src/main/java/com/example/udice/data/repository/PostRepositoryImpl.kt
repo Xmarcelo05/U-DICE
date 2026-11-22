@@ -1,5 +1,6 @@
 package com.example.udice.data.repository
 
+import com.example.udice.BuildConfig
 import com.example.udice.data.local.LocalDataSource
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
@@ -29,7 +30,7 @@ class PostRepositoryImpl @Inject constructor(
         runCatching {
             val remoteResult = remoteDataSource.getPosts()
             val remotePosts = remoteResult.getOrThrow()
-            localDataSource.insertPosts(remotePosts)
+            localDataSource.insertPosts(remotePosts.filterNot { it.autorId == DEMO_PUBLISHER_ID })
         }
     }
 
@@ -47,8 +48,11 @@ class PostRepositoryImpl @Inject constructor(
                 autorNombre = if (post.autorNombre.isNotBlank()) post.autorNombre else currentUser.nombre
             )
 
-            val remoteResult = remoteDataSource.createPost(postToCreate)
-            val createdPost = remoteResult.getOrThrow()
+            val createdPost = if (BuildConfig.DEBUG && currentUser.id == DEMO_PUBLISHER_ID) {
+                postToCreate
+            } else {
+                remoteDataSource.createPost(postToCreate).getOrThrow()
+            }
 
             // Persistir inmediatamente en Room (fuente única de verdad)
             localDataSource.insertPost(createdPost)
@@ -73,8 +77,16 @@ class PostRepositoryImpl @Inject constructor(
                 throw SecurityException("Solo el autor puede modificar esta publicación")
             }
 
-            val remoteResult = remoteDataSource.updatePost(post)
-            val updatedPost = remoteResult.getOrThrow()
+            val changes = existing.copy(
+                titulo = post.titulo,
+                descripcion = post.descripcion,
+                categoria = post.categoria
+            )
+            val updatedPost = if (BuildConfig.DEBUG && currentUser.id == DEMO_PUBLISHER_ID) {
+                changes
+            } else {
+                remoteDataSource.updatePost(changes).getOrThrow()
+            }
 
             localDataSource.updatePost(updatedPost)
             updatedPost
@@ -98,7 +110,9 @@ class PostRepositoryImpl @Inject constructor(
                 throw SecurityException("Solo el autor puede eliminar esta publicación")
             }
 
-            remoteDataSource.deletePost(id).getOrThrow()
+            if (!BuildConfig.DEBUG || currentUser.id != DEMO_PUBLISHER_ID) {
+                remoteDataSource.deletePost(id).getOrThrow()
+            }
             localDataSource.deletePostById(id)
         }
     }

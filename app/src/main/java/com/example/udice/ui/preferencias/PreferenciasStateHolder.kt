@@ -8,7 +8,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -52,7 +51,6 @@ class PreferenciasStateHolder @Inject constructor(
     private val _uiState = MutableStateFlow<PreferenciasUiState>(PreferenciasUiState.Loading)
     val uiState: StateFlow<PreferenciasUiState> = _uiState.asStateFlow()
 
-    private var currentUserId: String = "user-lector-1"
     private var persistedPreferences: Map<String, Boolean> = defaultPreferences
     private var editablePreferences: MutableMap<String, Boolean> = defaultPreferences.toMutableMap()
 
@@ -62,10 +60,9 @@ class PreferenciasStateHolder @Inject constructor(
 
     private fun loadPreferences() {
         viewModelScope.launch {
-            val user = sessionRepository.currentUser.firstOrNull() ?: sessionRepository.getCurrentUser()
-            currentUserId = user?.id ?: "user-lector-1"
+            val user = sessionRepository.getCurrentUser() ?: return@launch
 
-            preferencesRepository.observePreferences(currentUserId).collect { storedMap ->
+            preferencesRepository.observePreferences(user.id).collect { storedMap ->
                 val merged = if (storedMap.isEmpty()) {
                     defaultPreferences
                 } else {
@@ -100,10 +97,11 @@ class PreferenciasStateHolder @Inject constructor(
             }
             PreferenciasEvent.Save -> {
                 viewModelScope.launch {
+                    val user = sessionRepository.getCurrentUser() ?: return@launch
                     _uiState.update { current ->
                         if (current is PreferenciasUiState.Content) current.copy(isSaving = true) else current
                     }
-                    val result = preferencesRepository.updatePreferences(currentUserId, editablePreferences)
+                    val result = preferencesRepository.updatePreferences(user.id, editablePreferences)
                     if (result.isSuccess) {
                         persistedPreferences = editablePreferences.toMap()
                         _uiState.update { current ->

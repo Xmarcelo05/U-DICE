@@ -11,5 +11,7 @@ data class UserEntity(
     val rol: String,
     val facultad: String?,
     val carrera: String?,
-    val isCurrentSession: Boolean = false
+    val isCurrentSession: Boolean = false,
+    val passwordSalt: ByteArray? = null,
+    val passwordHash: ByteArray? = null
 )

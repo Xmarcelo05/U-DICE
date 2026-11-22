@@ -12,17 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -40,7 +39,8 @@ import com.example.udice.ui.theme.Blanco
 fun UDiceHeader(
     title: String,
     currentRole: UserRole,
-    onRoleToggle: () -> Unit
+    onLogout: () -> Unit,
+    logoutEnabled: Boolean
 ) {
     val gradientBrush = Brush.horizontalGradient(
         colors = listOf(AzulOscuro, AzulInstitucional, AzulPrincipal)
@@ -59,6 +59,7 @@ fun UDiceHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Logo de la App
@@ -87,12 +88,10 @@ fun UDiceHeader(
                 }
             }
 
-            // Selector de Rol (Lector / Publicador) y Avatar
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    onClick = onRoleToggle,
                     shape = RoundedCornerShape(20.dp),
                     color = Color.White.copy(alpha = 0.2f),
                     modifier = Modifier.padding(end = 8.dp)
@@ -106,29 +105,11 @@ fun UDiceHeader(
                     )
                 }
 
-                // Avatar con punto rojo de notificación
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.25f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Perfil",
-                            tint = Blanco,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    // Punto rojo
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFEF4444))
-                            .align(Alignment.TopEnd)
+                IconButton(onClick = onLogout, enabled = logoutEnabled) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = "Cerrar sesión",
+                        tint = Blanco
                     )
                 }
             }
