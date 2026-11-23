@@ -127,7 +127,7 @@ fun PreferenciasScreen(
             ) {
                 // SECCIÓN FACULTADES
                 Text(
-                    text = "FACULTADES DE INTERÉS (RF 3)",
+                    text = "FACULTADES DE INTERÉS",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = GrisPizarra,
@@ -160,9 +160,8 @@ fun PreferenciasScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // SECCIÓN OTROS / ALCANCE GENERAL (RF 5)
                 Text(
-                    text = "DEPENDENCIAS Y SERVICIOS CAMPUS (RF 5)",
+                    text = "DEPENDENCIAS Y SERVICIOS CAMPUS",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = GrisPizarra,

@@ -2,28 +2,29 @@ package com.example.udice.ui.mispublicaciones
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,16 +56,20 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun MisPublicacionesRoute(stateHolder: MisPublicacionesStateHolder = hiltViewModel()) {
+fun MisPublicacionesRoute(
+    onPostClick: (String) -> Unit = {},
+    stateHolder: MisPublicacionesStateHolder = hiltViewModel()
+) {
     val posts by stateHolder.ownPosts.collectAsStateWithLifecycle()
     val operation by stateHolder.operation.collectAsStateWithLifecycle()
-    MisPublicacionesScreen(posts, operation, stateHolder::edit, stateHolder::delete)
+    MisPublicacionesScreen(posts, operation, onPostClick, stateHolder::edit, stateHolder::delete)
 }
 
 @Composable
 private fun MisPublicacionesScreen(
     posts: List<Post>,
     operation: PostOperation,
+    onPostClick: (String) -> Unit,
     onEdit: (Post) -> Unit,
     onDelete: (String) -> Unit
 ) {
@@ -102,7 +107,13 @@ private fun MisPublicacionesScreen(
             }
         }
         items(posts, key = { it.id }) { post ->
-            OwnPostCard(post, !operation.running, { editing = post }, { deleting = post })
+            OwnPostCard(
+                post = post,
+                enabled = !operation.running,
+                onPostClick = { onPostClick(post.id) },
+                onEdit = { editing = post },
+                onDelete = { deleting = post }
+            )
         }
     }
 
@@ -139,12 +150,18 @@ private fun MisPublicacionesScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun OwnPostCard(post: Post, enabled: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun OwnPostCard(
+    post: Post,
+    enabled: Boolean,
+    onPostClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     val colors = MaterialTheme.colorScheme
     val date = remember(post.fecha) { DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(post.fecha)) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onPostClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),

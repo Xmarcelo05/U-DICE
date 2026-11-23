@@ -17,10 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.udice.data.model.Rol
 import com.example.udice.data.model.User
 import com.example.udice.ui.admin.AdminRoute
@@ -29,7 +31,9 @@ import com.example.udice.ui.auth.AuthStateHolder
 import com.example.udice.ui.auth.SessionState
 import com.example.udice.ui.components.UDiceBottomBar
 import com.example.udice.ui.components.UDiceHeader
+import com.example.udice.ui.detalle.DetallePublicacionRoute
 import com.example.udice.ui.feed.InicioFeedRoute
+import com.example.udice.ui.guardados.GuardadosRoute
 import com.example.udice.ui.mispublicaciones.MisPublicacionesRoute
 import com.example.udice.ui.navigation.NavRoutes
 import com.example.udice.ui.navigation.UserRole
@@ -71,12 +75,15 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(error) { if (error != null) snackbar.showSnackbar(error) }
 
-    val title = when (route ?: startRoute) {
-        NavRoutes.ADMIN -> "Administración"
-        NavRoutes.PREFERENCIAS -> "Preferencias"
-        NavRoutes.NUEVA_PUBLICACION -> "Nueva publicación"
-        NavRoutes.PERFIL -> "Mi perfil"
-        NavRoutes.MIS_PUBLICACIONES -> "Mis publicaciones"
+    val currentRoute = route ?: startRoute
+    val title = when {
+        currentRoute == NavRoutes.ADMIN -> "Administración"
+        currentRoute == NavRoutes.PREFERENCIAS -> "Preferencias"
+        currentRoute == NavRoutes.NUEVA_PUBLICACION -> "Nueva publicación"
+        currentRoute == NavRoutes.PERFIL -> "Mi perfil"
+        currentRoute == NavRoutes.MIS_PUBLICACIONES -> "Mis publicaciones"
+        currentRoute == NavRoutes.GUARDADOS -> "Publicaciones guardadas"
+        currentRoute.startsWith("detalle_publicacion/") -> "Detalle del aviso"
         else -> "U-DICE · Novedades"
     }
     val goToFeed: () -> Unit = {
@@ -85,11 +92,16 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
             launchSingleTop = true
         }
     }
+    val goToDetail: (String) -> Unit = { postId ->
+        navController.navigate(NavRoutes.detallePublicacion(postId)) {
+            launchSingleTop = true
+        }
+    }
 
     Scaffold(
         topBar = { UDiceHeader(title, role, onLogout, logoutEnabled) },
         bottomBar = {
-            if (!isAdmin) UDiceBottomBar(route ?: startRoute, role) { destination ->
+            if (!isAdmin) UDiceBottomBar(currentRoute, role) { destination ->
                 navController.navigate(destination) {
                     popUpTo(NavRoutes.INICIO_FEED) { saveState = true }
                     launchSingleTop = true
@@ -107,7 +119,9 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
             if (isAdmin) {
                 composable(NavRoutes.ADMIN) { AdminRoute() }
             } else {
-                composable(NavRoutes.INICIO_FEED) { InicioFeedRoute() }
+                composable(NavRoutes.INICIO_FEED) {
+                    InicioFeedRoute(onNavigateToPostDetail = goToDetail)
+                }
                 composable(NavRoutes.PREFERENCIAS) {
                     PreferenciasRoute(onGuardarExitoso = goToFeed, onCancelar = goToFeed)
                 }
@@ -115,12 +129,34 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
                     if (user.rol == Rol.ASO) NuevaPublicacionRoute(onPublicacionExitosa = goToFeed)
                 }
                 composable(NavRoutes.PERFIL) {
-                    PerfilScreen(user, logoutEnabled, onLogout) {
-                        navController.navigate(NavRoutes.MIS_PUBLICACIONES) { launchSingleTop = true }
-                    }
+                    PerfilScreen(
+                        user = user,
+                        logoutEnabled = logoutEnabled,
+                        onLogout = onLogout,
+                        onSavedPosts = {
+                            navController.navigate(NavRoutes.GUARDADOS) { launchSingleTop = true }
+                        },
+                        onMyPosts = {
+                            navController.navigate(NavRoutes.MIS_PUBLICACIONES) { launchSingleTop = true }
+                        }
+                    )
                 }
                 composable(NavRoutes.MIS_PUBLICACIONES) {
-                    if (user.rol == Rol.ASO) MisPublicacionesRoute()
+                    if (user.rol == Rol.ASO) MisPublicacionesRoute(onPostClick = goToDetail)
+                }
+                composable(NavRoutes.GUARDADOS) {
+                    GuardadosRoute(
+                        onPostClick = goToDetail,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                composable(
+                    route = NavRoutes.DETALLE_PUBLICACION,
+                    arguments = listOf(navArgument(NavRoutes.POST_ID_ARG) { type = NavType.StringType })
+                ) {
+                    DetallePublicacionRoute(
+                        onBack = { navController.popBackStack() }
+                    )
                 }
             }
         }

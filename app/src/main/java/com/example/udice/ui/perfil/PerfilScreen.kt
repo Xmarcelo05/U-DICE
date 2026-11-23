@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -43,7 +44,13 @@ import com.example.udice.ui.theme.GrisAzuladoClaro
 import com.example.udice.ui.theme.GrisPizarra
 
 @Composable
-fun PerfilScreen(user: User, logoutEnabled: Boolean, onLogout: () -> Unit, onMyPosts: () -> Unit) {
+fun PerfilScreen(
+    user: User,
+    logoutEnabled: Boolean,
+    onLogout: () -> Unit,
+    onSavedPosts: () -> Unit,
+    onMyPosts: () -> Unit
+) {
     val scrollState = rememberScrollState()
 
     Column(
@@ -104,6 +111,16 @@ fun PerfilScreen(user: User, logoutEnabled: Boolean, onLogout: () -> Unit, onMyP
         Spacer(modifier = Modifier.height(20.dp))
 
         // OPCIONES DE PERFIL
+        PerfilOptionCard(
+            icon = Icons.Default.Bookmark,
+            iconTint = AzulPrincipal,
+            iconBg = Color(0xFFEFF6FF),
+            title = "Publicaciones guardadas",
+            subtitle = "Consulta tu bóveda personal de avisos",
+            onClick = onSavedPosts
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
         if (user.rol == Rol.ASO) {
             PerfilOptionCard(
                 icon = Icons.Default.Description,
