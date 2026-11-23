@@ -151,6 +151,10 @@ f9253c8 feat(model): agrega modelos compartidos User, Rol, Facultad, Categoria, 
 
 `LoginScreen` y `RegisterScreen` recuperan las tarjetas, los iconos y el logotipo de `fixed-experimental`. El botón de acceso valida las credenciales y el rol proviene de la cuenta. Registro usa el selector de facultades y ambos formularios muestran los resultados de `AuthStateHolder`.
 
+### Diseño de Mis publicaciones
+
+`fixed-experimental` tenía una cuadrícula con avisos de ejemplo. Los controles de edición y eliminación se diseñaron sobre la pantalla actual. La lista usa tarjetas y colores del tema, acciones con icono, un formulario precargado y un diálogo de confirmación para eliminar. La lista sigue observando los avisos propios de Room.
+
 ### Comprobación manual en Android Studio
 
 1. Ejecutar la variante `debug`. Registrar un lector, volver al login y probar una contraseña incorrecta y luego la correcta. Revisar que el lector ve Inicio, Preferencias y Perfil.
