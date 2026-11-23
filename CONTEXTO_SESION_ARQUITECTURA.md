@@ -142,7 +142,7 @@ f9253c8 feat(model): agrega modelos compartidos User, Rol, Facultad, Categoria, 
 ## 6. Sesión, permisos y publicaciones propias
 
 - **RF 1 · Registro.** `AuthScreen` solicita nombre, correo, contraseña, facultad y carrera. `AuthStateHolder` delega a `SessionRepository`, que valida y registra cuentas lectoras locales en Room. Las contraseñas se verifican con PBKDF2-HMAC-SHA256 y sal individual. La migración 2 → 3 agrega las columnas de credenciales y limpia las sesiones de la versión anterior.
-- **RF 2 · Inicio de sesión.** `SessionRepository.currentUser` es la fuente de verdad de sesión y rol. `UDiceApp` monta el grafo privado cuando hay una sesión activa. El acceso local funciona sin conexión. La autenticación institucional y la provisión de cuentas ASO para producción quedan pendientes de integración con Supabase Auth y políticas de autorización del servidor.
+- **RF 2 · Inicio de sesión.** `SessionRepository.currentUser` es la fuente de verdad de sesión y rol. `UDiceApp` monta el grafo privado cuando hay una sesión activa. El acceso local funciona sin conexión. La integración opcional de Supabase Auth y la provisión de ASO se describen más abajo.
 - **RF 4 · Cierre de sesión.** La cabecera de todas las pantallas principales y Perfil exponen la acción. El repositorio limpia la sesión de Room y Compose retira el grafo privado. Preferencias, reacciones y marcadores del feed se consultan con el ID de la cuenta activa.
 - **RF 8 · Mis publicaciones.** Desde Perfil, una cuenta ASO puede listar sus avisos, editar título, descripción y categoría, y confirmar la eliminación. `PostRepositoryImpl` comprueba el rol y la autoría antes de editar o eliminar. Room propaga los cambios al feed y a la lista propia. Los avisos de la cuenta ASO de demostración se gestionan localmente.
 - **Barra inferior.** `UDiceBottomBar` aplica `navigationBarsPadding()` para reservar el espacio que Android reporta en modo gestual o de tres botones. `Scaffold` entrega el padding al contenido, que lo consume para evitar duplicarlo en destinos hijos.
@@ -161,6 +161,49 @@ f9253c8 feat(model): agrega modelos compartidos User, Rol, Facultad, Categoria, 
 2. Cerrar sesión desde la cabecera y pulsar Atrás. Entrar con la cuenta de demostración `aso.sistemas@universidad.edu` y la contraseña `UDiceDemo2026!`. Esta cuenta de prueba está habilitada únicamente en `debug`.
 3. Abrir Perfil → Mis publicaciones. Editar un aviso de demostración y comprobar el cambio en el feed. Eliminar un aviso y comprobar que desaparece de ambos sitios. Cerrar la app y volver a abrirla para comprobar la persistencia.
 4. Revisar Inicio, Preferencias, Perfil y Nueva publicación con navegación por gestos y por tres botones. Comprobar que se pueden tocar todas las opciones en vertical y horizontal.
+
+### Panel de administración
+
+En la variante `debug`, iniciar sesión con `admin@udice.example` y `UDiceAdmin2026!` abre el panel de administración. La cuenta se provisiona en Room al primer acceso válido. El autorregistro sigue creando cuentas lectoras.
+
+- **Facultades.** Un administrador puede crear cuentas ASO con nombre, correo, facultad y contraseña, sustituir su contraseña o eliminar su acceso. Los avisos ya publicados conservan su autoría. El repositorio valida el rol administrativo en cada operación.
+- **Reacciones.** Un administrador puede añadir un nombre y un emoji. Room v4 añade el catálogo local mediante migración y el feed observa sus cambios junto con las cuatro reacciones predefinidas.
+- Las cuentas administradas, los avisos ASO creados en `debug` y las reacciones nuevas se gestionan en el dispositivo. La sección siguiente describe el modo nube.
+
+### Integración opcional con Supabase
+
+El modo local sigue disponible para la demostración. Para activar Supabase Auth y el catálogo compartido, aplicar las migraciones de Supabase en orden, desplegar la [función de administración](supabase/functions/udice-faculty-admin/index.ts) y compilar con `-PudiceSupabase=true`. El modo nube usa una base Room de caché separada y conserva los tokens de sesión en memoria durante la ejecución de la app. Las cuentas ya creadas en Room deben crearse de nuevo en Auth. Aplicar también la [migración de votos y roles ASO](supabase/migrations/20261122000300_votos_y_roles_aso.sql) después de crear las tablas publicaciones y reacciones del esquema inicial. Volver a desplegar la función de administración. En modo nube, los avisos nuevos y los votos se guardan en Supabase. Los avisos de demostración anteriores solo existen en el dispositivo.
+
+#### Configuración en el proyecto de Supabase
+
+1. En el Dashboard, abrir el proyecto de U-DICE y verificar que su URL coincide con `SupabaseConfig.kt`. En **Authentication**, habilitar el proveedor Email y el registro de nuevos usuarios. Mantener activada la confirmación de correo para el autorregistro. [Configuración de Auth](https://supabase.com/docs/guides/auth/general-configuration)
+2. En **SQL Editor**, ejecutar la [primera migración](supabase/migrations/20261122000100_udice_auth_catalog.sql) si todavía no se aplicó. Después ejecutar la [migración de nombres en español](supabase/migrations/20261122000200_nombres_tablas_en_espanol.sql). Si ya existen `udice_profiles` y `udice_reaction_types`, solo se necesita la segunda. Aplicar los archivos una vez mediante SQL Editor o mediante el flujo de migraciones del equipo.
+
+   Los nombres finales son `perfiles_udice` y `tipos_reaccion_udice`. El cambio de nombre conserva filas y permisos. La primera migración revoca el acceso desde la API cliente a las tablas antiguas `admin_users` y `facultades_cuentas`, que contienen hashes de contraseñas. Las filas de esas tablas se conservan. Los registros del esquema anterior no se convierten automáticamente en cuentas de Supabase Auth.
+3. Desde la carpeta `U-DICE`, desplegar la función con una sesión de Supabase CLI con permisos de despliegue. En las versiones del CLI que admiten la bandera `--project-ref`, usar `supabase functions deploy udice-faculty-admin --project-ref <REF_DEL_PROYECTO>`. En versiones con destinos remotos configurados, seleccionar el proyecto equivalente. La función comprueba el token de Auth y el rol de U-DICE en cada petición. La clave de servicio se obtiene del entorno de Edge Functions. [Despliegue de funciones](https://supabase.com/docs/guides/functions/deploy) · [Variables de entorno](https://supabase.com/docs/guides/functions/secrets)
+4. En **Authentication → Users**, crear la cuenta que administrará U-DICE y confirmar que el correo pertenece a la persona autorizada. Copiar su UUID y ejecutar el siguiente SQL con el ID y el correo reales. Verificar que devuelve exactamente una fila.
+
+   ```sql
+   update public.perfiles_udice
+   set rol = 'ADMIN'
+   where id = '<UUID_DEL_USUARIO>'::uuid
+     and email = '<CORREO_DEL_ADMIN>'
+   returning id, email, rol;
+   ```
+
+5. Para Android Studio, agregar `udiceSupabase=true` al `gradle.properties` del usuario de Gradle o del proyecto y sincronizar. Para una compilación puntual en Windows, usar `.\gradlew.bat -PudiceSupabase=true :app:assembleDebug`. Iniciar sesión con la cuenta real del paso anterior.
+6. Crear un lector y una cuenta ASO de prueba. Confirmar que solo el administrador ve y puede usar el panel. Cambiar la contraseña de la ASO, comprobar que la anterior falla al volver a iniciar sesión y eliminar la cuenta de prueba. Añadir una reacción y abrir o actualizar el feed en otro dispositivo con una cuenta autenticada.
+
+#### Permisos de las cuentas
+
+| Cuenta | Cómo se asigna | Permisos en Auth y catálogo |
+| --- | --- | --- |
+| Lector | Autorregistro | Accede a su perfil y lee el catálogo. |
+| ASO | El administrador la crea desde el panel | Accede a su perfil, lee el catálogo y tiene el flujo de publicación de U-DICE. |
+| Administrador de U-DICE | Se asigna al UUID de una cuenta de Auth mediante el SQL anterior | Lee las cuentas ASO, administra sus credenciales y añade reacciones. |
+| Colaborador de Supabase | Se invita al proyecto desde el Dashboard si necesita desplegar | Usa un rol de Dashboard con permisos para los pasos que ejecutará. Las cuentas de U-DICE no requieren acceso al Dashboard. |
+
+Los roles de la app se leen de `perfiles_udice`. La aplicación usa una clave publicable y el token del usuario. La clave de servicio se mantiene en el entorno del servidor. [Control de acceso del Dashboard](https://supabase.com/docs/guides/platform/access-control)
 
 ### Pendientes de la etapa
 

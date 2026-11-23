@@ -21,6 +21,15 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE email = :email COLLATE NOCASE LIMIT 1")
     suspend fun getUserByEmail(email: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE rol = 'ASO' ORDER BY nombre COLLATE NOCASE")
+    fun observeFacultyAccounts(): Flow<List<UserEntity>>
+
+    @Query("UPDATE users SET passwordSalt = :salt, passwordHash = :hash WHERE id = :id AND rol = 'ASO'")
+    suspend fun resetFacultyPassword(id: String, salt: ByteArray, hash: ByteArray): Int
+
+    @Query("DELETE FROM users WHERE id = :id AND rol = 'ASO'")
+    suspend fun deleteFacultyAccount(id: String): Int
+
     @Query("SELECT * FROM users")
     fun observeAllUsers(): Flow<List<UserEntity>>
 

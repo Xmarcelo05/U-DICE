@@ -30,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -64,7 +66,8 @@ fun PostCard(
     onReactionClick: (TipoReaccion) -> Unit,
     onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onPostClick: () -> Unit = {}
+    onPostClick: () -> Unit = {},
+    reactionTypes: List<TipoReaccion> = TipoReaccion.defaults
 ) {
     val categoryColor = when (post.categoria) {
         Categoria.EVENTO -> ColorEvento
@@ -225,7 +228,7 @@ fun PostCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    TipoReaccion.entries.forEach { tipo ->
+                    reactionTypes.forEach { tipo ->
                         val isSelected = reactionSummary.userReaction == tipo
                         val count = reactionSummary.counts[tipo] ?: 0
 
@@ -236,7 +239,9 @@ fun PostCard(
                                 1.dp,
                                 if (isSelected) AzulPrincipal else Color.Transparent
                             ),
-                            modifier = Modifier.clickable { onReactionClick(tipo) }
+                            modifier = Modifier
+                                .semantics { contentDescription = tipo.displayName }
+                                .clickable { onReactionClick(tipo) }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),

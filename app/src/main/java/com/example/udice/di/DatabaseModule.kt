@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.udice.BuildConfig
 import com.example.udice.data.local.UDiceDatabase
 import com.example.udice.data.local.SeedDataCallback
 import com.example.udice.data.local.dao.PostDao
@@ -29,11 +30,27 @@ object DatabaseModule {
         }
     }
 
+    private val migration3To4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS reaction_types (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    label TEXT NOT NULL,
+                    emoji TEXT NOT NULL
+                )
+            """.trimIndent())
+        }
+    }
+
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext context: Context): UDiceDatabase =
-        Room.databaseBuilder(context, UDiceDatabase::class.java, "udice.db")
+        Room.databaseBuilder(
+            context,
+            UDiceDatabase::class.java,
+            if (BuildConfig.UDICE_SUPABASE) "udice-cloud.db" else "udice.db"
+        )
             .fallbackToDestructiveMigration(true)
-            .addMigrations(migration2To3)
+            .addMigrations(migration2To3, migration3To4)
             .addCallback(SeedDataCallback())
             .build()
 

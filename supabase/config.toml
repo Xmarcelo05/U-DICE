@@ -1,0 +1,5 @@
+project_id = "u-dice"
+
+[functions.udice-faculty-admin]
+# The function validates the Auth session and checks the caller's database role.
+verify_jwt = false

@@ -20,10 +20,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,6 +65,7 @@ fun InicioFeedRoute(
                 onSaveClick = { postId ->
                     stateHolder.onEvent(InicioFeedEvent.ToggleSave(postId))
                 },
+                onRefresh = { stateHolder.onEvent(InicioFeedEvent.Refresh) },
                 onPostClick = onNavigateToPostDetail
             )
         }
@@ -96,7 +99,8 @@ fun InicioFeedScreen(
     onCategorySelect: (String) -> Unit,
     onReactionClick: (String, TipoReaccion) -> Unit,
     onSaveClick: (String) -> Unit,
-    onPostClick: (String) -> Unit = {}
+    onPostClick: (String) -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -118,6 +122,13 @@ fun InicioFeedScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = onRefresh, enabled = !state.isRefreshing) {
+                    if (state.isRefreshing) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar novedades", tint = AzulPrincipal)
+                    }
+                }
                 state.categories.forEach { category ->
                     val isSelected = category == state.selectedCategory
                     FilterChip(
@@ -144,6 +155,10 @@ fun InicioFeedScreen(
                         )
                     )
                 }
+            }
+
+            state.errorMessage?.let { message ->
+                Text(message, Modifier.padding(horizontal = 16.dp), color = androidx.compose.material3.MaterialTheme.colorScheme.error)
             }
 
             // Lista de publicaciones en el feed (RF 6: orden cronológico y preferencias)
@@ -184,6 +199,7 @@ fun InicioFeedScreen(
                             post = item.post,
                             reactionSummary = item.reactions,
                             isSaved = item.isSaved,
+                            reactionTypes = state.reactionTypes,
                             onReactionClick = { tipo -> onReactionClick(item.post.id, tipo) },
                             onSaveClick = { onSaveClick(item.post.id) },
                             onPostClick = { onPostClick(item.post.id) }

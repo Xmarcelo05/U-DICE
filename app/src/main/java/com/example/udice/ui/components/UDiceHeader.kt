@@ -97,7 +97,11 @@ fun UDiceHeader(
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Text(
-                        text = if (currentRole == UserRole.PUBLICADOR) "Publicador" else "Lector",
+                        text = when (currentRole) {
+                            UserRole.LECTOR -> "Lector"
+                            UserRole.PUBLICADOR -> "Publicador"
+                            UserRole.ADMIN -> "Admin"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Blanco,

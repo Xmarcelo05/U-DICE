@@ -1,5 +1,7 @@
 package com.example.udice.data.remote.supabase
 
+import com.example.udice.BuildConfig
+import com.example.udice.data.repository.CloudSessionRepository
 import com.example.udice.data.model.Alcance
 import com.example.udice.data.model.Categoria
 import com.example.udice.data.model.Facultad
@@ -17,6 +19,8 @@ import javax.inject.Singleton
 @Singleton
 class SupabaseRemoteDataSource @Inject constructor(
     private val client: SupabaseHttpClient,
+    private val cloud: CloudHttpClient,
+    private val session: CloudSessionRepository,
     private val fallback: FakeRemoteDataSource
 ) : RemoteDataSource {
 
@@ -25,12 +29,25 @@ class SupabaseRemoteDataSource @Inject constructor(
         return runCatching {
             Instant.parse(raw).toEpochMilli()
         }.recoverCatching {
+            if (BuildConfig.UDICE_SUPABASE) throw it
             raw.toLong()
         }.getOrDefault(System.currentTimeMillis())
     }
 
+    private suspend fun cloudPosts(
+        method: String, query: String = "", body: JSONObject? = null
+    ): Result<String> = runCatching {
+        session.signedRequest { token ->
+            val path = "rest/v1/publicaciones" + if (query.isEmpty()) "" else "?$query"
+            val rows = cloud.request(path, method, token, body, returnRow = method != "GET")
+            if (method != "GET") check(JSONArray(rows).length() == 1) { "No se pudo modificar el aviso." }
+            rows
+        }
+    }
+
     override suspend fun getPosts(): Result<List<Post>> {
-        val result = client.get("publicaciones", "select=*&order=fecha.desc")
+        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("GET", "select=*&order=fecha.desc")
+            else client.get("publicaciones", "select=*&order=fecha.desc")
         return result.mapCatching { jsonStr ->
             val array = JSONArray(jsonStr)
             val posts = mutableListOf<Post>()
@@ -52,21 +69,23 @@ class SupabaseRemoteDataSource @Inject constructor(
                     )
                 )
             }
-            if (posts.isEmpty()) {
+            if (posts.isEmpty() && !BuildConfig.UDICE_SUPABASE) {
                 fallback.getPosts().getOrThrow()
             } else {
                 posts
             }
         }.recoverCatching {
+            if (BuildConfig.UDICE_SUPABASE) throw it
             fallback.getPosts().getOrThrow()
         }
     }
 
     override suspend fun getPostById(id: String): Result<Post?> {
-        val result = client.get("publicaciones", "id=eq.$id&select=*")
+        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("GET", "id=eq.$id&select=*")
+            else client.get("publicaciones", "id=eq.$id&select=*")
         return result.mapCatching { jsonStr ->
             val array = JSONArray(jsonStr)
-            if (array.length() == 0) return@mapCatching fallback.getPostById(id).getOrNull()
+            if (array.length() == 0) return@mapCatching if (BuildConfig.UDICE_SUPABASE) null else fallback.getPostById(id).getOrNull()
             val obj = array.getJSONObject(0)
             Post(
                 id = obj.getString("id"),
@@ -82,6 +101,7 @@ class SupabaseRemoteDataSource @Inject constructor(
                 imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null
             )
         }.recoverCatching {
+            if (BuildConfig.UDICE_SUPABASE) throw it
             fallback.getPostById(id).getOrNull()
         }
     }
@@ -97,7 +117,8 @@ class SupabaseRemoteDataSource @Inject constructor(
             put("alcance", post.alcance.name)
             if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
-        val result = client.post("publicaciones", json.toString())
+        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("POST", body = json.put("id", post.id))
+            else client.post("publicaciones", json.toString())
         return result.mapCatching { jsonStr ->
             val array = JSONArray(jsonStr)
             val created = array.getJSONObject(0)
@@ -106,6 +127,7 @@ class SupabaseRemoteDataSource @Inject constructor(
                 fecha = parseTimestamp(if (created.has("fecha") && !created.isNull("fecha")) created.getString("fecha") else null)
             )
         }.recoverCatching {
+            if (BuildConfig.UDICE_SUPABASE) throw it
             fallback.createPost(post).getOrThrow()
         }
     }
@@ -119,15 +141,18 @@ class SupabaseRemoteDataSource @Inject constructor(
             put("alcance", post.alcance.name)
             if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
-        val result = client.patch("publicaciones", "id=eq.${post.id}", json.toString())
+        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("PATCH", "id=eq.${post.id}", json)
+            else client.patch("publicaciones", "id=eq.${post.id}", json.toString())
         return result.mapCatching {
             post
         }.recoverCatching {
+            if (BuildConfig.UDICE_SUPABASE) throw it
             fallback.updatePost(post).getOrThrow()
         }
     }
 
     override suspend fun deletePost(id: String): Result<Unit> {
+        if (BuildConfig.UDICE_SUPABASE) return cloudPosts("DELETE", "id=eq.$id").map { Unit }
         val result = client.delete("publicaciones", "id=eq.$id")
         return result.recoverCatching {
             fallback.deletePost(id).getOrThrow()

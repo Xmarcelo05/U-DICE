@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
+val useSupabase = providers.gradleProperty("udiceSupabase").map { it.toBooleanStrict() }.orElse(false)
+
 android {
     namespace = "com.example.udice"
     compileSdk {
@@ -17,6 +19,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("boolean", "UDICE_SUPABASE", useSupabase.get().toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

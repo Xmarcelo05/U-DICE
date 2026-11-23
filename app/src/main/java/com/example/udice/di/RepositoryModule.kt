@@ -10,7 +10,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
-    @Binds @Singleton abstract fun bindSessionRepository(impl: SessionRepositoryImpl): SessionRepository
     @Binds @Singleton abstract fun bindPostRepository(impl: PostRepositoryImpl): PostRepository
     @Binds @Singleton abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
     @Binds @Singleton abstract fun bindSavedPostsRepository(impl: SavedPostsRepositoryImpl): SavedPostsRepository

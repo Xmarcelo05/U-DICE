@@ -10,6 +10,7 @@ import com.example.udice.data.local.dao.UserDao
 import com.example.udice.data.local.entity.PostEntity
 import com.example.udice.data.local.entity.PreferenceEntity
 import com.example.udice.data.local.entity.ReaccionEntity
+import com.example.udice.data.local.entity.ReactionTypeEntity
 import com.example.udice.data.local.entity.SavedPostEntity
 import com.example.udice.data.local.entity.UserEntity
 
@@ -19,9 +20,10 @@ import com.example.udice.data.local.entity.UserEntity
         UserEntity::class,
         PreferenceEntity::class,
         SavedPostEntity::class,
-        ReaccionEntity::class
+        ReaccionEntity::class,
+        ReactionTypeEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class UDiceDatabase : RoomDatabase() {

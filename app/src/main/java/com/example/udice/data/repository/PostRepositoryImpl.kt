@@ -48,7 +48,7 @@ class PostRepositoryImpl @Inject constructor(
                 autorNombre = if (post.autorNombre.isNotBlank()) post.autorNombre else currentUser.nombre
             )
 
-            val createdPost = if (BuildConfig.DEBUG && currentUser.id == DEMO_PUBLISHER_ID) {
+            val createdPost = if (BuildConfig.DEBUG && sessionRepository !is CloudSessionRepository) {
                 postToCreate
             } else {
                 remoteDataSource.createPost(postToCreate).getOrThrow()
@@ -82,7 +82,7 @@ class PostRepositoryImpl @Inject constructor(
                 descripcion = post.descripcion,
                 categoria = post.categoria
             )
-            val updatedPost = if (BuildConfig.DEBUG && currentUser.id == DEMO_PUBLISHER_ID) {
+            val updatedPost = if (BuildConfig.DEBUG && sessionRepository !is CloudSessionRepository) {
                 changes
             } else {
                 remoteDataSource.updatePost(changes).getOrThrow()
@@ -110,7 +110,7 @@ class PostRepositoryImpl @Inject constructor(
                 throw SecurityException("Solo el autor puede eliminar esta publicación")
             }
 
-            if (!BuildConfig.DEBUG || currentUser.id != DEMO_PUBLISHER_ID) {
+            if (!BuildConfig.DEBUG || sessionRepository is CloudSessionRepository) {
                 remoteDataSource.deletePost(id).getOrThrow()
             }
             localDataSource.deletePostById(id)

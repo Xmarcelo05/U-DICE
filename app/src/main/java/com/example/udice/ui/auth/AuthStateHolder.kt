@@ -1,6 +1,7 @@
 package com.example.udice.ui.auth
 
 import androidx.lifecycle.ViewModel
+import com.example.udice.BuildConfig
 import androidx.lifecycle.viewModelScope
 import com.example.udice.data.model.Facultad
 import com.example.udice.data.model.User
@@ -43,7 +44,10 @@ class AuthStateHolder @Inject constructor(private val repository: SessionReposit
     fun login(email: String, password: String) = submit { repository.login(email, password) }
 
     fun register(name: String, email: String, password: String, faculty: Facultad, career: String) =
-        submit("Cuenta creada. Inicia sesión con tu correo.") {
+        submit(
+            if (BuildConfig.UDICE_SUPABASE) "Registro enviado. Si se requiere confirmación, revisa tu correo."
+            else "Cuenta creada. Inicia sesión con tu correo."
+        ) {
             repository.register(name, email, password, faculty, career)
         }
 

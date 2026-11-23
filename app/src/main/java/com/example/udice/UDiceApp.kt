@@ -23,6 +23,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.udice.data.model.Rol
 import com.example.udice.data.model.User
+import com.example.udice.ui.admin.AdminRoute
 import com.example.udice.ui.auth.AuthScreen
 import com.example.udice.ui.auth.AuthStateHolder
 import com.example.udice.ui.auth.SessionState
@@ -59,12 +60,19 @@ fun UDiceApp() {
 private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLogout: () -> Unit) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val route = backStackEntry?.destination?.route ?: NavRoutes.INICIO_FEED
-    val role = if (user.rol == Rol.ASO) UserRole.PUBLICADOR else UserRole.LECTOR
+    val route = backStackEntry?.destination?.route
+    val role = when (user.rol) {
+        Rol.LECTOR -> UserRole.LECTOR
+        Rol.ASO -> UserRole.PUBLICADOR
+        Rol.ADMIN -> UserRole.ADMIN
+    }
+    val isAdmin = role == UserRole.ADMIN
+    val startRoute = if (isAdmin) NavRoutes.ADMIN else NavRoutes.INICIO_FEED
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(error) { if (error != null) snackbar.showSnackbar(error) }
 
-    val title = when (route) {
+    val title = when (route ?: startRoute) {
+        NavRoutes.ADMIN -> "Administración"
         NavRoutes.PREFERENCIAS -> "Preferencias"
         NavRoutes.NUEVA_PUBLICACION -> "Nueva publicación"
         NavRoutes.PERFIL -> "Mi perfil"
@@ -81,7 +89,7 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
     Scaffold(
         topBar = { UDiceHeader(title, role, onLogout, logoutEnabled) },
         bottomBar = {
-            UDiceBottomBar(route, role) { destination ->
+            if (!isAdmin) UDiceBottomBar(route ?: startRoute, role) { destination ->
                 navController.navigate(destination) {
                     popUpTo(NavRoutes.INICIO_FEED) { saveState = true }
                     launchSingleTop = true
@@ -93,23 +101,27 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
     ) { padding ->
         NavHost(
             navController,
-            startDestination = NavRoutes.INICIO_FEED,
+            startDestination = startRoute,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding)
         ) {
-            composable(NavRoutes.INICIO_FEED) { InicioFeedRoute() }
-            composable(NavRoutes.PREFERENCIAS) {
-                PreferenciasRoute(onGuardarExitoso = goToFeed, onCancelar = goToFeed)
-            }
-            composable(NavRoutes.NUEVA_PUBLICACION) {
-                if (user.rol == Rol.ASO) NuevaPublicacionRoute(onPublicacionExitosa = goToFeed)
-            }
-            composable(NavRoutes.PERFIL) {
-                PerfilScreen(user, logoutEnabled, onLogout) {
-                    navController.navigate(NavRoutes.MIS_PUBLICACIONES) { launchSingleTop = true }
+            if (isAdmin) {
+                composable(NavRoutes.ADMIN) { AdminRoute() }
+            } else {
+                composable(NavRoutes.INICIO_FEED) { InicioFeedRoute() }
+                composable(NavRoutes.PREFERENCIAS) {
+                    PreferenciasRoute(onGuardarExitoso = goToFeed, onCancelar = goToFeed)
                 }
-            }
-            composable(NavRoutes.MIS_PUBLICACIONES) {
-                if (user.rol == Rol.ASO) MisPublicacionesRoute()
+                composable(NavRoutes.NUEVA_PUBLICACION) {
+                    if (user.rol == Rol.ASO) NuevaPublicacionRoute(onPublicacionExitosa = goToFeed)
+                }
+                composable(NavRoutes.PERFIL) {
+                    PerfilScreen(user, logoutEnabled, onLogout) {
+                        navController.navigate(NavRoutes.MIS_PUBLICACIONES) { launchSingleTop = true }
+                    }
+                }
+                composable(NavRoutes.MIS_PUBLICACIONES) {
+                    if (user.rol == Rol.ASO) MisPublicacionesRoute()
+                }
             }
         }
     }

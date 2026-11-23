@@ -37,7 +37,8 @@ sealed interface InicioFeedUiState {
         val categories: List<String>,
         val selectedCategory: String = "Todos",
         val isRefreshing: Boolean = false,
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
+        val reactionTypes: List<TipoReaccion> = TipoReaccion.defaults
     ) : InicioFeedUiState
     data class Error(val message: String) : InicioFeedUiState
 }
@@ -61,28 +62,32 @@ class InicioFeedStateHolder @Inject constructor(
 ) : ViewModel() {
 
     private val selectedCategory = MutableStateFlow("Todos")
+    private val voteError = MutableStateFlow<String?>(null)
     private val isRefreshing = MutableStateFlow(false)
 
     init {
         viewModelScope.launch {
             val user = sessionRepository.getCurrentUser() ?: return@launch
             postRepository.syncPosts()
-            reactionsRepository.syncReactions()
+            voteError.value = reactionsRepository.syncReactions().exceptionOrNull()?.message
             preferencesRepository.syncPreferences(user.id)
         }
     }
 
-    private val filterFlow = combine(selectedCategory, isRefreshing) { category, refreshing ->
-        category to refreshing
+    private val filterFlow = combine(selectedCategory, isRefreshing, voteError) { category, refreshing, error ->
+        Triple(category, refreshing, error)
     }
 
     private fun feedFor(userId: String): Flow<InicioFeedUiState> = combine(
         postRepository.posts,
         preferencesRepository.observePreferences(userId),
-        reactionsRepository.observeAllReactions(userId),
+        reactionsRepository.observeAllReactions(userId).combine(reactionsRepository.reactionTypes) { summaries, types ->
+            summaries to types
+        },
         savedPostsRepository.observeSavedPostIds(userId),
         filterFlow
-    ) { posts, preferences, reactionsMap, savedIds, filter ->
+    ) { posts, preferences, reactionData, savedIds, filter ->
+        val (reactionsMap, types) = reactionData
         val category = filter.first
         val refreshing = filter.second
 
@@ -131,7 +136,9 @@ class InicioFeedStateHolder @Inject constructor(
             posts = items,
             categories = FEED_CATEGORIES,
             selectedCategory = category,
-            isRefreshing = refreshing
+            isRefreshing = refreshing,
+            errorMessage = filter.third,
+            reactionTypes = types
         )
     }
 
@@ -152,7 +159,7 @@ class InicioFeedStateHolder @Inject constructor(
             is InicioFeedEvent.ToggleReaction -> {
                 viewModelScope.launch {
                     val user = sessionRepository.getCurrentUser() ?: return@launch
-                    reactionsRepository.toggleReaction(event.postId, user.id, event.tipo)
+                    voteError.value = reactionsRepository.toggleReaction(event.postId, user.id, event.tipo).exceptionOrNull()?.message
                 }
             }
             is InicioFeedEvent.ToggleSave -> {
@@ -162,11 +169,15 @@ class InicioFeedStateHolder @Inject constructor(
                 }
             }
             InicioFeedEvent.Refresh -> {
+                if (isRefreshing.value) return
+                isRefreshing.value = true
                 viewModelScope.launch {
-                    isRefreshing.value = true
-                    postRepository.syncPosts()
-                    reactionsRepository.syncReactions()
-                    isRefreshing.value = false
+                    try {
+                        postRepository.syncPosts()
+                        voteError.value = reactionsRepository.syncReactions().exceptionOrNull()?.message
+                    } finally {
+                        isRefreshing.value = false
+                    }
                 }
             }
         }

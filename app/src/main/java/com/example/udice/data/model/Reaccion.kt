@@ -1,10 +1,14 @@
 package com.example.udice.data.model
 
-enum class TipoReaccion(val displayName: String, val emoji: String) {
-    ME_GUSTA("Me gusta", "❤️"),
-    UTIL("Útil", "💡"),
-    IMPORTANTE("Importante", "⚠️"),
-    INTERESANTE("Interesante", "👏")
+data class TipoReaccion(val id: String, val displayName: String, val emoji: String) {
+    companion object {
+        val defaults = listOf(
+            TipoReaccion("ME_GUSTA", "Me gusta", "❤️"),
+            TipoReaccion("UTIL", "Útil", "💡"),
+            TipoReaccion("IMPORTANTE", "Importante", "⚠️"),
+            TipoReaccion("INTERESANTE", "Interesante", "👏")
+        )
+    }
 }
 
 data class Reaccion(
