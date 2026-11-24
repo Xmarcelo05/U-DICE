@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import com.example.udice.ui.components.PublicationImage
+import com.example.udice.ui.components.PublicationVideo
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -247,8 +248,13 @@ fun DetallePublicacionScreen(
                                     color = colors.onSurface
                                 )
 
-                                post.imageUrl?.takeIf(String::isNotBlank)?.let { url ->
-                                    PublicationImage(url, "Imagen de ${post.titulo}")
+                                val videoUrl = post.videoUrl
+                                if (videoUrl != null) {
+                                    PublicationVideo(videoUrl, post.imageUrl)
+                                } else {
+                                    post.imageUrl?.takeIf(String::isNotBlank)?.let { url ->
+                                        PublicationImage(url, "Imagen de ${post.titulo}")
+                                    }
                                 }
 
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

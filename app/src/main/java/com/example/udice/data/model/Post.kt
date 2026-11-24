@@ -12,5 +12,6 @@ data class Post(
     val carrera: String? = null,
     val fecha: Long = System.currentTimeMillis(),
     val imageUrl: String? = null,
-    val allowedReactionIds: List<String>? = null
+    val allowedReactionIds: List<String>? = null,
+    val videoUrl: String? = null
 )

@@ -91,7 +91,8 @@ class SupabaseRemoteDataSource @Inject constructor(
                         carrera = if (obj.has("carrera") && !obj.isNull("carrera")) obj.getString("carrera") else null,
                         fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
                         imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
-                        allowedReactionIds = obj.reactionIds()
+                        allowedReactionIds = obj.reactionIds(),
+                        videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url")
                     )
                 )
             }
@@ -125,7 +126,8 @@ class SupabaseRemoteDataSource @Inject constructor(
                 carrera = if (obj.has("carrera") && !obj.isNull("carrera")) obj.getString("carrera") else null,
                 fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
                 imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
-                allowedReactionIds = obj.reactionIds()
+                allowedReactionIds = obj.reactionIds(),
+                videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url")
             )
         }.recoverCatching {
             if (BuildConfig.UDICE_SUPABASE) throw it
@@ -144,6 +146,7 @@ class SupabaseRemoteDataSource @Inject constructor(
             put("alcance", post.alcance.name)
             if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
+        if (post.videoUrl != null) json.put("video_url", post.videoUrl)
         val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("POST", body = json.put("id", post.id))
             else client.post("publicaciones", json.toString())
         return result.mapCatching { jsonStr ->

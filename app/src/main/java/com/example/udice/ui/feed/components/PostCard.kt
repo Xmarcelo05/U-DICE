@@ -184,8 +184,14 @@ fun PostCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             post.imageUrl?.takeIf(String::isNotBlank)?.let { url ->
-                PublicationImage(url, "Imagen de ${post.titulo}")
+                PublicationImage(url, if (post.videoUrl == null) "Imagen de ${post.titulo}" else "Miniatura del video")
                 Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            if (post.videoUrl != null) {
+                androidx.compose.material3.TextButton(onClick = onPostClick) {
+                    Text("Ver video")
+                }
             }
 
             // Chips informativos: Facultad y Alcance

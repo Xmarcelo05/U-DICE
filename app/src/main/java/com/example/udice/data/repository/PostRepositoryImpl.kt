@@ -41,7 +41,12 @@ class PostRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun createPost(post: Post, image: Uri?): Result<Post> = withContext(ioDispatcher) {
+    override suspend fun createPost(
+        post: Post,
+        image: Uri?,
+        video: Uri?,
+        onUploadProgress: (Int) -> Unit
+    ): Result<Post> = withContext(ioDispatcher) {
         updateCache {
             val currentUser = sessionRepository.getCurrentUser()
                 ?: throw IllegalStateException("Debes iniciar sesión para publicar")
@@ -55,13 +60,18 @@ class PostRepositoryImpl @Inject constructor(
                 autorNombre = if (post.autorNombre.isNotBlank()) post.autorNombre else currentUser.nombre
             )
 
-            val imageUrl = image?.let { images.save(it, currentUser.id, sessionRepository) }
-            val completePost = if (imageUrl != null) postToCreate.copy(imageUrl = imageUrl) else postToCreate
+            require(image == null || video == null) { "Adjunta una imagen o un video." }
+            val uploadedVideo = video?.let { images.saveVideo(it, currentUser.id, sessionRepository, onUploadProgress) }
+            val imageUrl = uploadedVideo?.thumbnailUrl ?: image?.let { images.save(it, currentUser.id, sessionRepository) }
+            val completePost = postToCreate.copy(
+                imageUrl = imageUrl ?: postToCreate.imageUrl,
+                videoUrl = uploadedVideo?.videoUrl ?: postToCreate.videoUrl
+            )
             val createdPost = if (usesCloud) {
                 remoteDataSource.createPost(completePost).getOrElse { error ->
                     // Ante un error de transporte, el servidor podría haber guardado el aviso.
-                    if (imageUrl != null && error is CloudRequestException && error.status in 400..499) {
-                        dataResult { images.remove(imageUrl, currentUser.id, sessionRepository) }
+                    if (error is CloudRequestException && error.status in 400..499) {
+                        removeMedia(listOfNotNull(imageUrl, uploadedVideo?.videoUrl), currentUser.id)
                     }
                     throw error
                 }
@@ -130,11 +140,12 @@ class PostRepositoryImpl @Inject constructor(
                 remoteDataSource.deletePost(id).getOrThrow()
             }
             localDataSource.deletePostById(id)
-            existing.imageUrl?.let { imageUrl ->
-                dataResult { images.remove(imageUrl, currentUser.id, sessionRepository) }
-            }
-            Unit
+            removeMedia(listOfNotNull(existing.imageUrl, existing.videoUrl), currentUser.id)
         }
+    }
+
+    private suspend fun removeMedia(urls: List<String>, userId: String) {
+        for (url in urls) dataResult { images.remove(url, userId, sessionRepository) }
     }
 
     private suspend fun <T> updateCache(action: suspend () -> T): Result<T> =

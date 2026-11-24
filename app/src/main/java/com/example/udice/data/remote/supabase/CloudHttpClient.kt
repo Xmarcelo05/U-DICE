@@ -21,7 +21,8 @@ class CloudHttpClient @Inject constructor(
         body: JSONObject? = null,
         returnRow: Boolean = false,
         image: ByteArray? = null,
-        imageType: String? = null
+        imageType: String? = null,
+        onUploadProgress: ((Int) -> Unit)? = null
     ): String = withContext(ioDispatcher) {
         val root = SupabaseConfig.BASE_URL.removeSuffix("/rest/v1")
         val connection = (URL("$root/$path").openConnection() as HttpURLConnection).apply {
@@ -39,7 +40,20 @@ class CloudHttpClient @Inject constructor(
                 connection.doOutput = true
                 connection.setRequestProperty("Content-Type", checkNotNull(imageType))
                 connection.setFixedLengthStreamingMode(image.size)
-                connection.outputStream.use { it.write(image) }
+                connection.outputStream.use { stream ->
+                    var sent = 0
+                    var percent = -1
+                    while (sent < image.size) {
+                        val count = minOf(64 * 1024, image.size - sent)
+                        stream.write(image, sent, count)
+                        sent += count
+                        val nextPercent = (sent.toLong() * 100 / image.size).toInt()
+                        if (nextPercent != percent) {
+                            percent = nextPercent
+                            onUploadProgress?.invoke(percent)
+                        }
+                    }
+                }
             } else if (body != null) {
                 connection.doOutput = true
                 connection.setRequestProperty("Content-Type", "application/json")

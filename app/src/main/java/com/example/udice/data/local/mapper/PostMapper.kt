@@ -18,7 +18,8 @@ fun PostEntity.toDomain(): Post = Post(
     carrera = carrera,
     fecha = fecha,
     imageUrl = imageUrl,
-    allowedReactionIds = allowedReactionIds?.split(',')
+    allowedReactionIds = allowedReactionIds?.split(','),
+    videoUrl = videoUrl
 )
 
 fun Post.toEntity(): PostEntity = PostEntity(
@@ -33,5 +34,6 @@ fun Post.toEntity(): PostEntity = PostEntity(
     carrera = carrera,
     fecha = fecha,
     imageUrl = imageUrl,
-    allowedReactionIds = allowedReactionIds?.joinToString(",")
+    allowedReactionIds = allowedReactionIds?.joinToString(","),
+    videoUrl = videoUrl
 )

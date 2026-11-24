@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Room
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.androidx.room.runtime)

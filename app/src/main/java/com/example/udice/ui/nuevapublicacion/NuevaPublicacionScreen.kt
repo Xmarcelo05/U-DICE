@@ -32,6 +32,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -70,6 +72,7 @@ fun NuevaPublicacionScreen(
     onDescripcionChange: (String) -> Unit,
     onCategoriaChange: (String) -> Unit,
     onImageSelected: (Uri?) -> Unit,
+    onVideoSelected: (Uri?) -> Unit,
     onSubmit: () -> Unit,
     onDismissSuccess: () -> Unit,
     onPublicacionExitosa: () -> Unit
@@ -77,6 +80,9 @@ fun NuevaPublicacionScreen(
     val scrollState = rememberScrollState()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) onImageSelected(uri)
+    }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) onVideoSelected(uri)
     }
     val hasImage = state.image != null
 
@@ -240,6 +246,28 @@ fun NuevaPublicacionScreen(
                     }
                 }
 
+                OutlinedButton(
+                    onClick = {
+                        videoPicker.launch(PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.SingleMimeType("video/mp4")
+                        ))
+                    },
+                    enabled = !state.isSubmitting,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (state.video == null) "Agregar video MP4" else "Cambiar video MP4")
+                }
+                Text("Video opcional, hasta 20 MB", color = GrisPizarra, fontSize = 12.sp)
+                if (state.video != null) {
+                    TextButton(onClick = { onVideoSelected(null) }, enabled = !state.isSubmitting) {
+                        Text("Quitar video")
+                    }
+                }
+                state.uploadProgress?.let { percent ->
+                    LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth())
+                    Text(if (percent == 100) "Guardando publicación…" else "Subiendo video: $percent%")
+                }
+
                 state.error?.let { message ->
                     Text(text = message, color = Color(0xFFB91C1C), modifier = Modifier.padding(top = 12.dp))
                 }
@@ -324,6 +352,7 @@ fun NuevaPublicacionRoute(
             onDescripcionChange = { stateHolder.onEvent(NuevaPublicacionEvent.DescriptionChanged(it)) },
             onCategoriaChange = { stateHolder.onEvent(NuevaPublicacionEvent.CategorySelected(it)) },
             onImageSelected = { stateHolder.onEvent(NuevaPublicacionEvent.ImageSelected(it)) },
+            onVideoSelected = { stateHolder.onEvent(NuevaPublicacionEvent.VideoSelected(it)) },
             onSubmit = { stateHolder.onEvent(NuevaPublicacionEvent.Submit) },
             onDismissSuccess = { stateHolder.onEvent(NuevaPublicacionEvent.DismissSuccess) },
             onPublicacionExitosa = onPublicacionExitosa
@@ -339,7 +368,7 @@ fun NuevaPublicacionScreenPreview() {
     UDICETheme {
         NuevaPublicacionScreen(
             state = NuevaPublicacionUiState.Content(), onTituloChange = {}, onDescripcionChange = {},
-            onCategoriaChange = {}, onImageSelected = {}, onSubmit = {}, onDismissSuccess = {}, onPublicacionExitosa = {}
+            onCategoriaChange = {}, onImageSelected = {}, onVideoSelected = {}, onSubmit = {}, onDismissSuccess = {}, onPublicacionExitosa = {}
         )
     }
 }

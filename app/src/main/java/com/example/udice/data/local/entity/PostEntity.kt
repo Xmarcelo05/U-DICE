@@ -16,5 +16,6 @@ data class PostEntity(
     val carrera: String?,
     val fecha: Long,
     val imageUrl: String?,
-    val allowedReactionIds: String?
+    val allowedReactionIds: String?,
+    val videoUrl: String?
 )

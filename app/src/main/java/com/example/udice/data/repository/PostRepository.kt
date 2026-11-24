@@ -9,7 +9,12 @@ interface PostRepository {
     fun observePost(id: String): Flow<Post?>
     suspend fun getPostById(id: String): Post?
     suspend fun syncPosts(): Result<Unit>
-    suspend fun createPost(post: Post, image: Uri? = null): Result<Post>
+    suspend fun createPost(
+        post: Post,
+        image: Uri? = null,
+        video: Uri? = null,
+        onUploadProgress: (Int) -> Unit = {}
+    ): Result<Post>
     suspend fun updatePost(post: Post): Result<Post>
     suspend fun deletePost(id: String): Result<Unit>
 }
