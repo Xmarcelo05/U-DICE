@@ -17,12 +17,103 @@ Ejecuta `./gradlew assembleDebug` (en Windows, `.\gradlew assembleDebug`). La va
 ## Arquitectura y datos
 
 ```mermaid
-flowchart LR
-    UI["Jetpack Compose y ViewModels"] --> R["Repositorios"]
-    R --> Room["Room: avisos, votos, guardados y preferencias"]
-    R --> Auth["Supabase Auth y Edge Function"]
-    R --> API["Supabase PostgREST y RPC de votos"]
-    R --> Storage["Supabase Storage: imágenes y videos"]
+flowchart TD
+    subgraph UI["Interfaz · Jetpack Compose y Material 3"]
+        Main["MainActivity<br/>Hilt y enlace de confirmación"] --> App["UDiceApp<br/>AuthStateHolder y SessionState"]
+        App -->|"Sin sesión"| Auth["AuthScreen<br/>Registro e inicio de sesión"]
+        App -->|"Con sesión"| Nav["SignedInApp<br/>Scaffold, barras y NavHost"]
+
+        Nav -->|"ADMIN"| Admin["AdminRoute<br/>AdminStateHolder → AdminScreen"]
+        Nav --> Feed["InicioFeedRoute<br/>InicioFeedStateHolder → InicioFeedScreen"]
+        Nav --> Pref["PreferenciasRoute<br/>PreferenciasStateHolder → PreferenciasScreen"]
+        Nav -->|"ASO"| New["NuevaPublicacionRoute<br/>NuevaPublicacionStateHolder → NuevaPublicacionScreen"]
+        Nav --> Profile["PerfilScreen<br/>Cuenta activa, guardados y avisos propios"]
+        Profile --> Own["MisPublicacionesRoute<br/>MisPublicacionesStateHolder → MisPublicacionesScreen"]
+        Profile --> Saved["GuardadosRoute<br/>GuardadosStateHolder → GuardadosScreen"]
+        Feed --> Card["PostCard<br/>Aviso, reacciones y guardado"]
+        Card --> Detail["DetallePublicacionRoute<br/>DetallePublicacionStateHolder → DetallePublicacionScreen"]
+        Saved --> Detail
+        Own --> Detail
+
+        New --> Picker["Selector de Android<br/>Hasta cuatro fotos o un MP4"]
+        New --> Gallery["Galería cuadrada y visor deslizable<br/>Coil y Compose HorizontalPager"]
+        Card --> Gallery
+        Detail --> Gallery
+        Detail --> Player["Media3 ExoPlayer<br/>Reproducción bajo demanda"]
+    end
+
+    subgraph DATA["Repositorios, persistencia y sincronización"]
+        Session["SessionRepository"]
+        CloudSession["CloudSessionRepository<br/>Sesión y renovación en memoria"]
+        LocalSession["SessionRepositoryImpl<br/>Sesión de desarrollo"]
+        Posts["PostRepository<br/>PostRepositoryImpl"]
+        PrefRepo["PreferencesRepository<br/>PreferencesRepositoryImpl"]
+        SavedRepo["SavedPostsRepository<br/>SavedPostsRepositoryImpl"]
+        Votes["ReactionsRepository<br/>ReactionsRepositoryImpl"]
+
+        Session -->|"Modo Supabase"| CloudSession
+        Session -->|"Modo local"| LocalSession
+        Posts -->|"Flow de avisos y caché"| Local["LocalDataSource<br/>RoomLocalDataSource"]
+        Posts -->|"CRUD y sincronización paginada"| Remote["RemoteDataSource<br/>SupabaseRemoteDataSource"]
+        Posts --> Media["PublicationImageStorage<br/>Carga de fotos, MP4 y miniaturas"]
+        LocalSession --> Local
+        PrefRepo -->|"Preferencias por cuenta"| Local
+        SavedRepo -->|"Guardados por cuenta"| Local
+        Local --> Room["Room · UDiceDatabase v7<br/>PostDao, UserDao, PreferenceDao,<br/>SavedPostDao y ReaccionDao"]
+        Votes -->|"ReaccionDao: votos y catálogo"| Room
+        Seed["SeedDataCallback<br/>Datos iniciales de desarrollo"] -. "Solo modo local" .-> Room
+        CloudSession --> HTTP["CloudHttpClient<br/>Peticiones HTTPS con token"]
+        Remote --> HTTP
+        Votes --> HTTP
+        Media --> HTTP
+    end
+
+    App --> Session
+    Admin --> Session
+    Admin --> Votes
+    Feed --> Posts
+    Feed --> PrefRepo
+    Feed --> SavedRepo
+    Feed --> Votes
+    Pref --> PrefRepo
+    New --> Posts
+    Own --> Posts
+    Own -->|"Catálogo de emojis"| Votes
+    Saved --> SavedRepo
+    Detail --> Posts
+    Detail --> SavedRepo
+
+    subgraph CLOUD["Supabase"]
+        AuthAPI["Auth<br/>Registro, confirmación y tokens"]
+        REST["PostgREST<br/>Publicaciones, perfiles y catálogo"]
+        RPC["RPC udice_guardar_reaccion<br/>Valida identidad y emojis habilitados por aviso"]
+        Edge["Edge Function udice-faculty-admin<br/>Gestión de cuentas ASO"]
+        Storage["Storage<br/>publicaciones-imagenes y publicaciones-videos"]
+        Policies["RLS y permisos de base de datos<br/>Lectura autenticada y escrituras por autor"]
+        REST --> Policies
+        Storage --> StoragePolicy["Políticas de Storage<br/>Carga ASO en carpeta propia y lectura por URL"]
+    end
+
+    HTTP --> AuthAPI
+    HTTP --> REST
+    HTTP --> RPC
+    HTTP --> Edge
+    HTTP --> Storage
+    Gallery -. "Carga por URL" .-> Storage
+    Player -. "Lee MP4 por HTTPS" .-> Storage
+    AuthAPI -. "Confirmación de correo" .-> Main
+
+    subgraph DI["Inyección de dependencias y concurrencia"]
+        Hilt["Hilt y KSP"] --> Modules["SessionModule, RepositoryModule,<br/>DataSourceModule, DatabaseModule y CoroutinesModule"]
+        Modules --> IO["@IoDispatcher · Dispatchers.IO"]
+        Config["local.properties → BuildConfig<br/>URL y clave publishable"]
+    end
+
+    Modules -. "Inyección" .-> Session
+    Modules -. "Inyección" .-> Posts
+    IO -. "withContext y flowOn" .-> Local
+    IO -. "Peticiones HTTPS" .-> HTTP
+    Config -. "Configuración de Supabase" .-> HTTP
 ```
 
 - **Avisos.** Supabase recibe los cambios y Room expone el estado reactivo a la interfaz. Una sincronización exitosa actualiza la caché completa. Ante un fallo de red se conserva la última copia.
