@@ -51,7 +51,7 @@ object DatabaseModule {
         )
             .fallbackToDestructiveMigration(true)
             .addMigrations(migration2To3, migration3To4)
-            .addCallback(SeedDataCallback())
+            .apply { if (!BuildConfig.UDICE_SUPABASE) addCallback(SeedDataCallback()) }
             .build()
 
     @Provides fun providePostDao(db: UDiceDatabase): PostDao = db.postDao()

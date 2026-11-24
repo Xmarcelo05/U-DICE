@@ -44,8 +44,8 @@ class RoomLocalDataSource @Inject constructor(
         postDao.insertPost(post.toEntity())
     }
 
-    override suspend fun insertPosts(posts: List<Post>): Unit = withContext(ioDispatcher) {
-        postDao.insertPosts(posts.map { it.toEntity() })
+    override suspend fun replacePosts(posts: List<Post>): Unit = withContext(ioDispatcher) {
+        postDao.replacePosts(posts.map { it.toEntity() })
     }
 
     override suspend fun updatePost(post: Post): Unit = withContext(ioDispatcher) {
@@ -98,8 +98,7 @@ class RoomLocalDataSource @Inject constructor(
         val entities = preferences.map { (key, isEnabled) ->
             PreferenceEntity(userId = userId, preferenceKey = key, isEnabled = isEnabled)
         }
-        preferenceDao.clearPreferences(userId)
-        preferenceDao.insertPreferences(entities)
+        preferenceDao.replacePreferences(userId, entities)
     }
 
     override fun observeSavedPostIds(userId: String): Flow<Set<String>> =

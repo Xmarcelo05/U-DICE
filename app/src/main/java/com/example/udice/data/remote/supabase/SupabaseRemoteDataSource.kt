@@ -45,8 +45,23 @@ class SupabaseRemoteDataSource @Inject constructor(
         }
     }
 
+    private suspend fun getCloudPostRows(): Result<String> = runCatching {
+        val rows = JSONArray()
+        var query = "select=*&order=id.asc"
+        while (true) {
+            val page = JSONArray(cloudPosts("GET", query).getOrThrow())
+            if (page.length() == 0) break
+            for (index in 0 until page.length()) {
+                rows.put(page.getJSONObject(index))
+            }
+            val lastId = page.getJSONObject(page.length() - 1).getString("id")
+            query = "select=*&order=id.asc&id=gt.$lastId"
+        }
+        rows.toString()
+    }
+
     override suspend fun getPosts(): Result<List<Post>> {
-        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("GET", "select=*&order=fecha.desc")
+        val result = if (BuildConfig.UDICE_SUPABASE) getCloudPostRows()
             else client.get("publicaciones", "select=*&order=fecha.desc")
         return result.mapCatching { jsonStr ->
             val array = JSONArray(jsonStr)

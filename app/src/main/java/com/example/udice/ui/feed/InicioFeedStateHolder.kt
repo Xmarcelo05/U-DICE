@@ -67,11 +67,16 @@ class InicioFeedStateHolder @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val user = sessionRepository.getCurrentUser() ?: return@launch
-            postRepository.syncPosts()
-            voteError.value = reactionsRepository.syncReactions().exceptionOrNull()?.message
-            preferencesRepository.syncPreferences(user.id)
+            sessionRepository.getCurrentUser() ?: return@launch
+            refreshFeed()
         }
+    }
+
+    private suspend fun refreshFeed() {
+        val postsError = postRepository.syncPosts().exceptionOrNull()
+        val reactionsError = reactionsRepository.syncReactions().exceptionOrNull()
+        voteError.value = postsError?.let { "No se pudieron sincronizar los avisos." }
+            ?: reactionsError?.message
     }
 
     private val filterFlow = combine(selectedCategory, isRefreshing, voteError) { category, refreshing, error ->
@@ -173,8 +178,7 @@ class InicioFeedStateHolder @Inject constructor(
                 isRefreshing.value = true
                 viewModelScope.launch {
                     try {
-                        postRepository.syncPosts()
-                        voteError.value = reactionsRepository.syncReactions().exceptionOrNull()?.message
+                        refreshFeed()
                     } finally {
                         isRefreshing.value = false
                     }

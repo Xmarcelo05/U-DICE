@@ -74,6 +74,34 @@ class SessionAndPostRepositoryTest {
     }
 
     @Test
+    fun completeSnapshotRemovesMissingPostsAndPreservesSavedPosts() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val db = Room.inMemoryDatabaseBuilder(context, UDiceDatabase::class.java)
+            .addCallback(SeedDataCallback())
+            .build()
+        try {
+            val local = RoomLocalDataSource(
+                db.postDao(), db.userDao(), db.preferenceDao(), db.savedPostDao(), Dispatchers.IO
+            )
+            val post = checkNotNull(local.getPostById("post-seed-1"))
+            val updated = post.copy(titulo = "Aviso sincronizado")
+            val deleted = post.copy(id = "remote-deletion")
+            local.insertPost(deleted)
+            local.setPostSaved("reader", post.id, true)
+
+            local.replacePosts(listOf(updated))
+            assertEquals(listOf(updated), local.observePosts().first())
+            assertNull(local.getPostById(deleted.id))
+            assertEquals(listOf(updated), local.observeSavedPosts("reader").first())
+
+            local.replacePosts(emptyList())
+            assertTrue(local.observePosts().first().isEmpty())
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
     fun adminManagesFacultyCredentialsAndReactionCatalog() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val db = Room.inMemoryDatabaseBuilder(context, UDiceDatabase::class.java)

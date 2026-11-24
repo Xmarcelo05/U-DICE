@@ -1,13 +1,15 @@
 package com.example.udice.data.repository
 
-import com.example.udice.BuildConfig
 import com.example.udice.data.local.LocalDataSource
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
 import com.example.udice.data.remote.RemoteDataSource
 import com.example.udice.di.IoDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -18,6 +20,9 @@ class PostRepositoryImpl @Inject constructor(
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : PostRepository {
 
+    private val usesCloud = sessionRepository is CloudSessionRepository
+    private val cacheMutex = Mutex()
+
     override val posts: Flow<List<Post>> = localDataSource.observePosts()
 
     override fun observePost(id: String): Flow<Post?> = localDataSource.observePostById(id)
@@ -27,15 +32,15 @@ class PostRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncPosts(): Result<Unit> = withContext(ioDispatcher) {
-        runCatching {
-            val remoteResult = remoteDataSource.getPosts()
-            val remotePosts = remoteResult.getOrThrow()
-            localDataSource.insertPosts(remotePosts.filterNot { it.autorId == DEMO_PUBLISHER_ID })
+        updateCache {
+            if (usesCloud) {
+                localDataSource.replacePosts(remoteDataSource.getPosts().getOrThrow())
+            }
         }
     }
 
     override suspend fun createPost(post: Post): Result<Post> = withContext(ioDispatcher) {
-        runCatching {
+        updateCache {
             val currentUser = sessionRepository.getCurrentUser()
                 ?: throw IllegalStateException("Debes iniciar sesión para publicar")
 
@@ -48,7 +53,7 @@ class PostRepositoryImpl @Inject constructor(
                 autorNombre = if (post.autorNombre.isNotBlank()) post.autorNombre else currentUser.nombre
             )
 
-            val createdPost = if (BuildConfig.DEBUG && sessionRepository !is CloudSessionRepository) {
+            val createdPost = if (!usesCloud) {
                 postToCreate
             } else {
                 remoteDataSource.createPost(postToCreate).getOrThrow()
@@ -61,7 +66,7 @@ class PostRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updatePost(post: Post): Result<Post> = withContext(ioDispatcher) {
-        runCatching {
+        updateCache {
             val currentUser = sessionRepository.getCurrentUser()
                 ?: throw IllegalStateException("Debes iniciar sesión para editar publicaciones")
 
@@ -70,7 +75,7 @@ class PostRepositoryImpl @Inject constructor(
             }
 
             val existing = localDataSource.getPostById(post.id)
-                ?: remoteDataSource.getPostById(post.id).getOrNull()
+                ?: (if (usesCloud) remoteDataSource.getPostById(post.id).getOrThrow() else null)
                 ?: throw NoSuchElementException("No se encontró la publicación con id ${post.id}")
 
             if (existing.autorId != currentUser.id) {
@@ -82,19 +87,19 @@ class PostRepositoryImpl @Inject constructor(
                 descripcion = post.descripcion,
                 categoria = post.categoria
             )
-            val updatedPost = if (BuildConfig.DEBUG && sessionRepository !is CloudSessionRepository) {
+            val updatedPost = if (!usesCloud) {
                 changes
             } else {
                 remoteDataSource.updatePost(changes).getOrThrow()
             }
 
-            localDataSource.updatePost(updatedPost)
+            localDataSource.insertPost(updatedPost)
             updatedPost
         }
     }
 
     override suspend fun deletePost(id: String): Result<Unit> = withContext(ioDispatcher) {
-        runCatching {
+        updateCache {
             val currentUser = sessionRepository.getCurrentUser()
                 ?: throw IllegalStateException("Debes iniciar sesión para eliminar publicaciones")
 
@@ -103,17 +108,24 @@ class PostRepositoryImpl @Inject constructor(
             }
 
             val existing = localDataSource.getPostById(id)
-                ?: remoteDataSource.getPostById(id).getOrNull()
+                ?: (if (usesCloud) remoteDataSource.getPostById(id).getOrThrow() else null)
                 ?: throw NoSuchElementException("No se encontró la publicación con id $id")
 
             if (existing.autorId != currentUser.id) {
                 throw SecurityException("Solo el autor puede eliminar esta publicación")
             }
 
-            if (!BuildConfig.DEBUG || sessionRepository is CloudSessionRepository) {
+            if (usesCloud) {
                 remoteDataSource.deletePost(id).getOrThrow()
             }
             localDataSource.deletePostById(id)
         }
     }
+
+    private suspend fun <T> updateCache(action: suspend () -> T): Result<T> =
+        cacheMutex.withLock {
+            runCatching { action() }.onFailure {
+                if (it is CancellationException) throw it
+            }
+        }
 }

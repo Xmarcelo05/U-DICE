@@ -8,5 +8,4 @@ interface SavedPostsRepository {
     fun observeSavedPosts(userId: String): Flow<List<Post>>
     fun isPostSaved(userId: String, postId: String): Flow<Boolean>
     suspend fun toggleSavePost(userId: String, postId: String): Result<Boolean>
-    suspend fun syncSavedPosts(userId: String): Result<Unit>
 }

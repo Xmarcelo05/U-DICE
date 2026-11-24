@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.example.udice.data.local.entity.PreferenceEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,12 @@ interface PreferenceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPreference(preference: PreferenceEntity)
+
+    @Transaction
+    suspend fun replacePreferences(userId: String, preferences: List<PreferenceEntity>) {
+        clearPreferences(userId)
+        insertPreferences(preferences)
+    }
 
     @Query("DELETE FROM user_preferences WHERE userId = :userId")
     suspend fun clearPreferences(userId: String)
