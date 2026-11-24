@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import com.example.udice.ui.components.PublicationImage
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -245,6 +246,10 @@ fun DetallePublicacionScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = colors.onSurface
                                 )
+
+                                post.imageUrl?.takeIf(String::isNotBlank)?.let { url ->
+                                    PublicationImage(url, "Imagen de ${post.titulo}")
+                                }
 
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     DetailMetaRow(Icons.Default.School, post.facultad.displayName)

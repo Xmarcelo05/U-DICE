@@ -1,5 +1,6 @@
 package com.example.udice.ui.feed
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,13 +30,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.udice.data.model.TipoReaccion
 import com.example.udice.ui.feed.components.PostCard
@@ -51,6 +61,18 @@ fun InicioFeedRoute(
     stateHolder: InicioFeedStateHolder = hiltViewModel()
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
+    val activityLifecycle = (LocalActivity.current as? LifecycleOwner)?.lifecycle
+    DisposableEffect(activityLifecycle, stateHolder) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> stateHolder.onBackground()
+                Lifecycle.Event.ON_START -> stateHolder.onForeground()
+                else -> Unit
+            }
+        }
+        activityLifecycle?.addObserver(observer)
+        onDispose { activityLifecycle?.removeObserver(observer) }
+    }
 
     when (val current = state) {
         is InicioFeedUiState.Content -> {
@@ -102,6 +124,15 @@ fun InicioFeedScreen(
     onPostClick: (String) -> Unit = {},
     onRefresh: () -> Unit = {}
 ) {
+    val listState = rememberLazyListState()
+    var lastAppliedRefresh by rememberSaveable { mutableIntStateOf(0) }
+    LaunchedEffect(state.refreshVersion) {
+        if (state.refreshVersion > lastAppliedRefresh) {
+            listState.requestScrollToItem(0)
+        }
+        lastAppliedRefresh = state.refreshVersion
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -190,6 +221,7 @@ fun InicioFeedScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)

@@ -1,5 +1,6 @@
 package com.example.udice.ui.nuevapublicacion
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.udice.data.model.Alcance
@@ -20,7 +21,7 @@ sealed interface NuevaPublicacionUiState {
     data object Loading : NuevaPublicacionUiState
     data class Content(
         val titulo: String = "", val descripcion: String = "", val categoria: String = "Evento",
-        val hasImage: Boolean = false, val isSubmitting: Boolean = false,
+        val image: Uri? = null, val isSubmitting: Boolean = false,
         val error: String? = null, val published: Boolean = false
     ) : NuevaPublicacionUiState
     data class Error(val message: String) : NuevaPublicacionUiState
@@ -30,7 +31,7 @@ sealed interface NuevaPublicacionEvent {
     data class TitleChanged(val value: String) : NuevaPublicacionEvent
     data class DescriptionChanged(val value: String) : NuevaPublicacionEvent
     data class CategorySelected(val value: String) : NuevaPublicacionEvent
-    data object ToggleImage : NuevaPublicacionEvent
+    data class ImageSelected(val uri: Uri?) : NuevaPublicacionEvent
     data object Submit : NuevaPublicacionEvent
     data object DismissSuccess : NuevaPublicacionEvent
 }
@@ -45,13 +46,14 @@ class NuevaPublicacionStateHolder @Inject constructor(
 
     fun onEvent(event: NuevaPublicacionEvent) {
         val current = _uiState.value as? NuevaPublicacionUiState.Content ?: return
+        if (current.isSubmitting) return
         when (event) {
             is NuevaPublicacionEvent.TitleChanged -> _uiState.value = current.copy(titulo = event.value, error = null)
             is NuevaPublicacionEvent.DescriptionChanged -> _uiState.value = current.copy(descripcion = event.value, error = null)
             is NuevaPublicacionEvent.CategorySelected -> _uiState.value = current.copy(categoria = event.value, error = null)
-            NuevaPublicacionEvent.ToggleImage -> _uiState.value = current.copy(hasImage = !current.hasImage)
+            is NuevaPublicacionEvent.ImageSelected -> _uiState.value = current.copy(image = event.uri, error = null)
             NuevaPublicacionEvent.DismissSuccess -> _uiState.value = current.copy(
-                titulo = "", descripcion = "", categoria = "Evento", hasImage = false, published = false, error = null
+                titulo = "", descripcion = "", categoria = "Evento", image = null, published = false, error = null
             )
             NuevaPublicacionEvent.Submit -> submit(current)
         }
@@ -80,7 +82,7 @@ class NuevaPublicacionStateHolder @Inject constructor(
                 facultad = user.facultad ?: Facultad.CIENCIAS_VIDA_TECNOLOGIAS,
                 alcance = Alcance.GENERAL
             )
-            postRepository.createPost(post)
+            postRepository.createPost(post, form.image)
                 .onSuccess { _uiState.value = form.copy(published = true) }
                 .onFailure { error -> _uiState.value = form.copy(error = error.message ?: "No se pudo publicar.") }
         }

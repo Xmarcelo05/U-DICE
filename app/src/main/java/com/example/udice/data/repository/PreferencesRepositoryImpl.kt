@@ -23,7 +23,7 @@ class PreferencesRepositoryImpl @Inject constructor(
         userId: String,
         preferences: Map<String, Boolean>
     ): Result<Unit> = withContext(ioDispatcher) {
-        runCatching {
+        dataResult {
             localDataSource.savePreferences(userId, preferences)
         }
     }

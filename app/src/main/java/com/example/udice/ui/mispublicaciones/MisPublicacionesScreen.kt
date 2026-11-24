@@ -32,6 +32,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.udice.data.model.Categoria
 import com.example.udice.data.model.Post
+import com.example.udice.data.model.TipoReaccion
 import java.text.DateFormat
 import java.util.Date
 
@@ -62,13 +64,15 @@ fun MisPublicacionesRoute(
 ) {
     val posts by stateHolder.ownPosts.collectAsStateWithLifecycle()
     val operation by stateHolder.operation.collectAsStateWithLifecycle()
-    MisPublicacionesScreen(posts, operation, onPostClick, stateHolder::edit, stateHolder::delete)
+    val reactionTypes by stateHolder.reactionTypes.collectAsStateWithLifecycle(TipoReaccion.defaults)
+    MisPublicacionesScreen(posts, operation, reactionTypes, onPostClick, stateHolder::edit, stateHolder::delete)
 }
 
 @Composable
 private fun MisPublicacionesScreen(
     posts: List<Post>,
     operation: PostOperation,
+    reactionTypes: List<TipoReaccion>,
     onPostClick: (String) -> Unit,
     onEdit: (Post) -> Unit,
     onDelete: (String) -> Unit
@@ -118,7 +122,7 @@ private fun MisPublicacionesScreen(
     }
 
     editing?.let { post ->
-        EditPostDialog(post, onDismiss = { editing = null }) {
+        EditPostDialog(post, reactionTypes, onDismiss = { editing = null }) {
             editing = null
             onEdit(it)
         }
@@ -205,12 +209,19 @@ private fun OwnPostCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EditPostDialog(post: Post, onDismiss: () -> Unit, onSave: (Post) -> Unit) {
+private fun EditPostDialog(
+    post: Post,
+    reactionTypes: List<TipoReaccion>,
+    onDismiss: () -> Unit,
+    onSave: (Post) -> Unit
+) {
     var title by remember(post.id) { mutableStateOf(post.titulo) }
     var description by remember(post.id) { mutableStateOf(post.descripcion) }
     var category by remember(post.id) { mutableStateOf(post.categoria) }
     var categoryMenu by remember { mutableStateOf(false) }
+    var selection by remember(post.id) { mutableStateOf(post.allowedReactionIds) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -242,13 +253,36 @@ private fun EditPostDialog(post: Post, onDismiss: () -> Unit, onSave: (Post) -> 
                         }
                     }
                 }
+                Text("Emojis para los lectores", style = MaterialTheme.typography.titleSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    reactionTypes.forEach { type ->
+                        val selected = selection?.contains(type.id) ?: true
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                val current = selection ?: reactionTypes.map { it.id }
+                                selection = if (selected) current - type.id else current + type.id
+                            },
+                            label = { Text("${type.emoji} ${type.displayName}") }
+                        )
+                    }
+                }
+                if (selection != null) {
+                    TextButton(onClick = { selection = null }) { Text("Usar catálogo completo") }
+                }
+                if (selection?.isEmpty() == true) {
+                    Text("Elige al menos un emoji.", color = MaterialTheme.colorScheme.error)
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSave(post.copy(titulo = title, descripcion = description, categoria = category)) },
+                onClick = {
+                    onSave(post.copy(titulo = title, descripcion = description, categoria = category,
+                        allowedReactionIds = selection))
+                },
                 shape = RoundedCornerShape(12.dp),
-                enabled = title.isNotBlank() && description.isNotBlank()
+                enabled = title.isNotBlank() && description.isNotBlank() && selection?.isEmpty() != true
             ) { Text("Guardar cambios") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }

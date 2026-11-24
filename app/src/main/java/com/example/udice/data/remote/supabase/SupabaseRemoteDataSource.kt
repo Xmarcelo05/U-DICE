@@ -2,11 +2,13 @@ package com.example.udice.data.remote.supabase
 
 import com.example.udice.BuildConfig
 import com.example.udice.data.repository.CloudSessionRepository
+import com.example.udice.data.repository.dataResult
 import com.example.udice.data.model.Alcance
 import com.example.udice.data.model.Categoria
 import com.example.udice.data.model.Facultad
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
+import com.example.udice.data.model.TipoReaccion
 import com.example.udice.data.model.User
 import com.example.udice.data.remote.FakeRemoteDataSource
 import com.example.udice.data.remote.RemoteDataSource
@@ -36,7 +38,7 @@ class SupabaseRemoteDataSource @Inject constructor(
 
     private suspend fun cloudPosts(
         method: String, query: String = "", body: JSONObject? = null
-    ): Result<String> = runCatching {
+    ): Result<String> = dataResult {
         session.signedRequest { token ->
             val path = "rest/v1/publicaciones" + if (query.isEmpty()) "" else "?$query"
             val rows = cloud.request(path, method, token, body, returnRow = method != "GET")
@@ -45,7 +47,7 @@ class SupabaseRemoteDataSource @Inject constructor(
         }
     }
 
-    private suspend fun getCloudPostRows(): Result<String> = runCatching {
+    private suspend fun getCloudPostRows(): Result<String> = dataResult {
         val rows = JSONArray()
         var query = "select=*&order=id.asc"
         while (true) {
@@ -59,6 +61,14 @@ class SupabaseRemoteDataSource @Inject constructor(
         }
         rows.toString()
     }
+
+    private fun JSONObject.reactionIds(): List<String>? =
+        optJSONArray("reacciones_permitidas")?.let { ids ->
+            List(ids.length()) { index ->
+                val id = ids.getString(index)
+                if (TipoReaccion.defaults.any { it.id == id }) id else "LOCAL_$id"
+            }
+        }
 
     override suspend fun getPosts(): Result<List<Post>> {
         val result = if (BuildConfig.UDICE_SUPABASE) getCloudPostRows()
@@ -80,7 +90,8 @@ class SupabaseRemoteDataSource @Inject constructor(
                         alcance = runCatching { Alcance.valueOf(obj.getString("alcance")) }.getOrDefault(Alcance.GENERAL),
                         carrera = if (obj.has("carrera") && !obj.isNull("carrera")) obj.getString("carrera") else null,
                         fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
-                        imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null
+                        imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
+                        allowedReactionIds = obj.reactionIds()
                     )
                 )
             }
@@ -113,7 +124,8 @@ class SupabaseRemoteDataSource @Inject constructor(
                 alcance = runCatching { Alcance.valueOf(obj.getString("alcance")) }.getOrDefault(Alcance.GENERAL),
                 carrera = if (obj.has("carrera") && !obj.isNull("carrera")) obj.getString("carrera") else null,
                 fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
-                imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null
+                imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
+                allowedReactionIds = obj.reactionIds()
             )
         }.recoverCatching {
             if (BuildConfig.UDICE_SUPABASE) throw it
@@ -156,7 +168,11 @@ class SupabaseRemoteDataSource @Inject constructor(
             put("alcance", post.alcance.name)
             if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
-        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("PATCH", "id=eq.${post.id}", json)
+        val result = if (BuildConfig.UDICE_SUPABASE) {
+            val allowed = post.allowedReactionIds?.map { it.removePrefix("LOCAL_") }
+            json.put("reacciones_permitidas", allowed?.let { JSONArray(it) } ?: JSONObject.NULL)
+            cloudPosts("PATCH", "id=eq.${post.id}", json)
+        }
             else client.patch("publicaciones", "id=eq.${post.id}", json.toString())
         return result.mapCatching {
             post

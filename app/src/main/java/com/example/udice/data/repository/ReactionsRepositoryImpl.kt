@@ -45,7 +45,7 @@ class ReactionsRepositoryImpl @Inject constructor(
 
     override suspend fun addReactionType(label: String, emoji: String): Result<Unit> = withContext(ioDispatcher) {
         catalogMutex.withLock {
-            runCatching {
+            dataResult {
                 check(sessionRepository.getCurrentUser()?.rol == Rol.ADMIN) {
                     "Se requiere una sesión de administrador."
                 }
@@ -66,7 +66,7 @@ class ReactionsRepositoryImpl @Inject constructor(
                             .put("label", name).put("emoji", symbol))
                     }
                     refreshReactionTypes()
-                    return@runCatching
+                    return@dataResult
                 }
                 val id = "LOCAL_" + UUID.randomUUID().toString().replace("-", "").take(24)
                 reaccionDao.insertReactionType(ReactionTypeEntity(id, name, symbol))
@@ -74,14 +74,16 @@ class ReactionsRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun refreshReactionTypes(): Result<Unit> = cloudResult {
-        if (sessionRepository is CloudSessionRepository) {
-            sessionRepository.signedRequest { token ->
-                val rows = JSONArray(cloudHttp.request("rest/v1/tipos_reaccion_udice?select=id,label,emoji", token = token))
-                reaccionDao.cacheReactionTypes((0 until rows.length()).map { index ->
-                    val row = rows.getJSONObject(index)
-                    ReactionTypeEntity("LOCAL_" + row.getString("id"), row.getString("label"), row.getString("emoji"))
-                })
+    override suspend fun refreshReactionTypes(): Result<Unit> = withContext(ioDispatcher) {
+        dataResult {
+            if (sessionRepository is CloudSessionRepository) {
+                sessionRepository.signedRequest { token ->
+                    val rows = JSONArray(cloudHttp.request("rest/v1/tipos_reaccion_udice?select=id,label,emoji", token = token))
+                    reaccionDao.cacheReactionTypes((0 until rows.length()).map { index ->
+                        val row = rows.getJSONObject(index)
+                        ReactionTypeEntity("LOCAL_" + row.getString("id"), row.getString("label"), row.getString("emoji"))
+                    })
+                }
             }
         }
     }
@@ -164,11 +166,11 @@ class ReactionsRepositoryImpl @Inject constructor(
         userId: String,
         tipo: TipoReaccion
     ): Result<Unit> = withContext(ioDispatcher) {
-        runCatching {
+        dataResult {
             require(reactionTypes.first().any { it.id == tipo.id }) { "La reacción ya no está disponible." }
             if (sessionRepository is CloudSessionRepository) {
                 saveCloudVote(sessionRepository, postId, userId, tipo)
-                return@runCatching
+                return@dataResult
             }
             val currentReaction = reaccionDao.observeUserReaction(userId, postId).firstOrNull()
 
@@ -205,10 +207,10 @@ class ReactionsRepositoryImpl @Inject constructor(
 
     override suspend fun syncReactions(): Result<Unit> = withContext(ioDispatcher) {
         refreshReactionTypes().getOrElse { return@withContext Result.failure(it) }
-        runCatching {
+        dataResult {
             if (sessionRepository is CloudSessionRepository) {
                 loadCloudVotes(sessionRepository)
-                return@runCatching
+                return@dataResult
             }
             val result = supabaseClient.get("reacciones", "select=*")
             result.getOrNull()?.let { jsonStr ->

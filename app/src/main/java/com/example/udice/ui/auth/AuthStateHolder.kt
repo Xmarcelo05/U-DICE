@@ -25,7 +25,8 @@ data class AuthFormState(
     val registering: Boolean = false,
     val busy: Boolean = false,
     val message: String? = null,
-    val error: Boolean = false
+    val error: Boolean = false,
+    val verificationEmail: String? = null
 )
 
 @HiltViewModel
@@ -45,21 +46,38 @@ class AuthStateHolder @Inject constructor(private val repository: SessionReposit
 
     fun register(name: String, email: String, password: String, faculty: Facultad, career: String) =
         submit(
-            if (BuildConfig.UDICE_SUPABASE) "Registro enviado. Si se requiere confirmación, revisa tu correo."
-            else "Cuenta creada. Inicia sesión con tu correo."
+            successMessage = if (BuildConfig.UDICE_SUPABASE) null else "Cuenta creada. Inicia sesión con tu correo.",
+            verificationEmail = email.trim().takeIf { BuildConfig.UDICE_SUPABASE }
         ) {
             repository.register(name, email, password, faculty, career)
         }
 
     fun logout() = submit { repository.logout() }
 
-    private fun submit(successMessage: String? = null, action: suspend () -> Result<Unit>) {
+    fun dismissVerification() {
+        _form.value = _form.value.copy(verificationEmail = null)
+    }
+
+    fun onEmailConfirmationLink(failed: Boolean) {
+        if (_form.value.busy) return
+        _form.value = AuthFormState(
+            message = if (failed) "El enlace de confirmación no es válido o ya venció."
+                else "Ya puedes intentar iniciar sesión con tu correo y contraseña.",
+            error = failed
+        )
+    }
+
+    private fun submit(
+        successMessage: String? = null,
+        verificationEmail: String? = null,
+        action: suspend () -> Result<Unit>
+    ) {
         val current = _form.value
         if (current.busy) return
         _form.value = current.copy(busy = true, message = null)
         viewModelScope.launch {
             _form.value = action().fold(
-                onSuccess = { AuthFormState(message = successMessage) },
+                onSuccess = { AuthFormState(message = successMessage, verificationEmail = verificationEmail) },
                 onFailure = { current.copy(busy = false, message = it.message ?: "Vuelve a intentarlo.", error = true) }
             )
         }

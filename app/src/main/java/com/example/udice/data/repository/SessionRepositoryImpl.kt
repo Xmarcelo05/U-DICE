@@ -48,7 +48,7 @@ class SessionRepositoryImpl @Inject constructor(
         name: String, email: String, password: String, faculty: Facultad, career: String
     ): Result<Unit> = withContext(ioDispatcher) {
         sessionMutex.withLock {
-            runCatching {
+            dataResult {
                 require(career.isNotBlank()) { "Completa la carrera." }
                 insertAccount(name, email, password, faculty, career.trim(), Rol.LECTOR)
             }
@@ -57,7 +57,7 @@ class SessionRepositoryImpl @Inject constructor(
 
     override suspend fun login(email: String, password: String): Result<Unit> = withContext(ioDispatcher) {
         sessionMutex.withLock {
-            runCatching {
+            dataResult {
                 val normalizedEmail = normalizeEmail(email)
                 if (BuildConfig.DEBUG && normalizedEmail == DEMO_ADMIN_EMAIL && password == DEMO_ADMIN_PASSWORD &&
                     userDao.getUserById(DEMO_ADMIN_ID) == null
@@ -80,7 +80,7 @@ class SessionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout(): Result<Unit> = withContext(ioDispatcher) {
-        sessionMutex.withLock { runCatching { localDataSource.clearCurrentSession() } }
+        sessionMutex.withLock { dataResult { localDataSource.clearCurrentSession() } }
     }
 
     override fun observeFacultyAccounts() = combine(currentUser, userDao.observeFacultyAccounts()) { user, accounts ->
@@ -105,7 +105,7 @@ class SessionRepositoryImpl @Inject constructor(
 
     private suspend fun asAdmin(action: suspend () -> Unit): Result<Unit> = withContext(ioDispatcher) {
         sessionMutex.withLock {
-            runCatching {
+            dataResult {
                 check(getCurrentUser()?.rol == Rol.ADMIN) { "Se requiere una sesión de administrador." }
                 action()
             }

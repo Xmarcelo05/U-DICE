@@ -15,5 +15,6 @@ data class PostEntity(
     val alcance: String,
     val carrera: String?,
     val fecha: Long,
-    val imageUrl: String?
+    val imageUrl: String?,
+    val allowedReactionIds: String?
 )

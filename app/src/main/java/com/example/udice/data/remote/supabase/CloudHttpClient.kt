@@ -19,7 +19,9 @@ class CloudHttpClient @Inject constructor(
         method: String = "GET",
         token: String? = null,
         body: JSONObject? = null,
-        returnRow: Boolean = false
+        returnRow: Boolean = false,
+        image: ByteArray? = null,
+        imageType: String? = null
     ): String = withContext(ioDispatcher) {
         val root = SupabaseConfig.BASE_URL.removeSuffix("/rest/v1")
         val connection = (URL("$root/$path").openConnection() as HttpURLConnection).apply {
@@ -33,7 +35,12 @@ class CloudHttpClient @Inject constructor(
             if (token != null) setRequestProperty("Authorization", "Bearer $token")
         }
         try {
-            if (body != null) {
+            if (image != null) {
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", checkNotNull(imageType))
+                connection.setFixedLengthStreamingMode(image.size)
+                connection.outputStream.use { it.write(image) }
+            } else if (body != null) {
                 connection.doOutput = true
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.outputStream.bufferedWriter(Charsets.UTF_8).use { it.write(body.toString()) }

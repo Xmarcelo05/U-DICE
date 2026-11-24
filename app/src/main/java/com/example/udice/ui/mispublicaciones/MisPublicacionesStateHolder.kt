@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
 import com.example.udice.data.repository.PostRepository
+import com.example.udice.data.repository.ReactionsRepository
 import com.example.udice.data.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,11 +22,14 @@ data class PostOperation(val running: Boolean = false, val error: String? = null
 @HiltViewModel
 class MisPublicacionesStateHolder @Inject constructor(
     private val posts: PostRepository,
-    session: SessionRepository
+    session: SessionRepository,
+    reactions: ReactionsRepository
 ) : ViewModel() {
     val ownPosts = combine(session.currentUser, posts.posts) { user, allPosts ->
         if (user?.rol == Rol.ASO) allPosts.filter { it.autorId == user.id } else emptyList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val reactionTypes = reactions.reactionTypes
 
     private val _operation = MutableStateFlow(PostOperation())
     val operation = _operation.asStateFlow()
@@ -40,8 +45,15 @@ class MisPublicacionesStateHolder @Inject constructor(
         if (_operation.value.running) return
         _operation.value = PostOperation(running = true)
         viewModelScope.launch {
-            val result = runCatching { action() }
-            _operation.value = PostOperation(error = result.exceptionOrNull()?.message)
+            try {
+                action()
+                _operation.value = PostOperation()
+            } catch (e: CancellationException) {
+                _operation.value = PostOperation()
+                throw e
+            } catch (e: Exception) {
+                _operation.value = PostOperation(error = e.message)
+            }
         }
     }
 }

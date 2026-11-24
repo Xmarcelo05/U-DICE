@@ -17,7 +17,7 @@ class SavedPostsRepositoryImpl @Inject constructor(
     override fun isPostSaved(userId: String, postId: String): Flow<Boolean> = localDataSource.isPostSaved(userId, postId)
 
     override suspend fun toggleSavePost(userId: String, postId: String): Result<Boolean> = withContext(ioDispatcher) {
-        runCatching {
+        dataResult {
             val saved = localDataSource.isPostSaved(userId, postId).first()
             val newSavedState = !saved
             localDataSource.setPostSaved(userId, postId, newSavedState)

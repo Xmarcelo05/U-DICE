@@ -42,6 +42,12 @@ object DatabaseModule {
         }
     }
 
+    private val migration4To5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE posts ADD COLUMN allowedReactionIds TEXT")
+        }
+    }
+
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext context: Context): UDiceDatabase =
         Room.databaseBuilder(
@@ -50,7 +56,7 @@ object DatabaseModule {
             if (BuildConfig.UDICE_SUPABASE) "udice-cloud.db" else "udice.db"
         )
             .fallbackToDestructiveMigration(true)
-            .addMigrations(migration2To3, migration3To4)
+            .addMigrations(migration2To3, migration3To4, migration4To5)
             .apply { if (!BuildConfig.UDICE_SUPABASE) addCallback(SeedDataCallback()) }
             .build()
 

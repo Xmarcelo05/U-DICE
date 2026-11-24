@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import com.example.udice.ui.components.PublicationImage
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -182,6 +183,11 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            post.imageUrl?.takeIf(String::isNotBlank)?.let { url ->
+                PublicationImage(url, "Imagen de ${post.titulo}")
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
             // Chips informativos: Facultad y Alcance
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -228,7 +234,7 @@ fun PostCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    reactionTypes.forEach { tipo ->
+                    reactionTypes.filter { post.allowedReactionIds?.contains(it.id) != false }.forEach { tipo ->
                         val isSelected = reactionSummary.userReaction == tipo
                         val count = reactionSummary.counts[tipo] ?: 0
 

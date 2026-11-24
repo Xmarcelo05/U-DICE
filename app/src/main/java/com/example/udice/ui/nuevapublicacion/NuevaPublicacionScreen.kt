@@ -1,5 +1,9 @@
 package com.example.udice.ui.nuevapublicacion
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.udice.ui.components.PublicationImage
 import com.example.udice.ui.theme.AzulPrincipal
 import com.example.udice.ui.theme.Blanco
 import com.example.udice.ui.theme.ColorAviso
@@ -64,12 +69,16 @@ fun NuevaPublicacionScreen(
     onTituloChange: (String) -> Unit,
     onDescripcionChange: (String) -> Unit,
     onCategoriaChange: (String) -> Unit,
-    onToggleImage: () -> Unit,
+    onImageSelected: (Uri?) -> Unit,
     onSubmit: () -> Unit,
     onDismissSuccess: () -> Unit,
     onPublicacionExitosa: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) onImageSelected(uri)
+    }
+    val hasImage = state.image != null
 
     val categorias = listOf(
         "Evento" to ColorEvento,
@@ -195,10 +204,12 @@ fun NuevaPublicacionScreen(
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFF8FAFC),
-                    border = BorderStroke(1.dp, if (state.hasImage) AzulPrincipal else GrisBordes),
+                    border = BorderStroke(1.dp, if (hasImage) AzulPrincipal else GrisBordes),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(onClick = onToggleImage)
+                        .clickable(enabled = !state.isSubmitting) {
+                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }
                 ) {
                     Row(
                         modifier = Modifier.padding(vertical = 16.dp, horizontal = 20.dp),
@@ -206,21 +217,32 @@ fun NuevaPublicacionScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = if (state.hasImage) Icons.Default.CheckCircle else Icons.Default.Image,
+                            imageVector = if (hasImage) Icons.Default.CheckCircle else Icons.Default.Image,
                             contentDescription = "Agregar imagen",
-                            tint = if (state.hasImage) AzulPrincipal else GrisPizarra,
+                            tint = if (hasImage) AzulPrincipal else GrisPizarra,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (state.hasImage) "Imagen adjuntada ✓" else "Agregar imagen",
+                            text = if (hasImage) "Cambiar imagen" else "Agregar imagen",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (state.hasImage) AzulPrincipal else GrisPizarra
+                            color = if (hasImage) AzulPrincipal else GrisPizarra
                         )
                     }
                 }
 
+                state.image?.let { uri ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    PublicationImage(uri, "Vista previa de la imagen")
+                    TextButton(onClick = { onImageSelected(null) }, enabled = !state.isSubmitting) {
+                        Text("Quitar imagen")
+                    }
+                }
+
+                state.error?.let { message ->
+                    Text(text = message, color = Color(0xFFB91C1C), modifier = Modifier.padding(top = 12.dp))
+                }
                 Spacer(modifier = Modifier.height(28.dp))
 
                 // BOTÓN PUBLICAR
@@ -238,7 +260,7 @@ fun NuevaPublicacionScreen(
                     )
                 ) {
                     Text(
-                        text = "Publicar",
+                        text = if (state.isSubmitting) "Publicando…" else "Publicar",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
@@ -248,9 +270,6 @@ fun NuevaPublicacionScreen(
     }
 
     // Diálogo de confirmación de publicación exitosa
-    state.error?.let { message ->
-        Text(text = message, color = Color(0xFFB91C1C), modifier = Modifier.padding(horizontal = 16.dp))
-    }
     if (state.published) {
         AlertDialog(
             onDismissRequest = { },
@@ -304,7 +323,7 @@ fun NuevaPublicacionRoute(
             onTituloChange = { stateHolder.onEvent(NuevaPublicacionEvent.TitleChanged(it)) },
             onDescripcionChange = { stateHolder.onEvent(NuevaPublicacionEvent.DescriptionChanged(it)) },
             onCategoriaChange = { stateHolder.onEvent(NuevaPublicacionEvent.CategorySelected(it)) },
-            onToggleImage = { stateHolder.onEvent(NuevaPublicacionEvent.ToggleImage) },
+            onImageSelected = { stateHolder.onEvent(NuevaPublicacionEvent.ImageSelected(it)) },
             onSubmit = { stateHolder.onEvent(NuevaPublicacionEvent.Submit) },
             onDismissSuccess = { stateHolder.onEvent(NuevaPublicacionEvent.DismissSuccess) },
             onPublicacionExitosa = onPublicacionExitosa
@@ -320,7 +339,7 @@ fun NuevaPublicacionScreenPreview() {
     UDICETheme {
         NuevaPublicacionScreen(
             state = NuevaPublicacionUiState.Content(), onTituloChange = {}, onDescripcionChange = {},
-            onCategoriaChange = {}, onToggleImage = {}, onSubmit = {}, onDismissSuccess = {}, onPublicacionExitosa = {}
+            onCategoriaChange = {}, onImageSelected = {}, onSubmit = {}, onDismissSuccess = {}, onPublicacionExitosa = {}
         )
     }
 }

@@ -17,7 +17,8 @@ fun PostEntity.toDomain(): Post = Post(
     alcance = runCatching { Alcance.valueOf(alcance) }.getOrDefault(Alcance.GENERAL),
     carrera = carrera,
     fecha = fecha,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    allowedReactionIds = allowedReactionIds?.split(',')
 )
 
 fun Post.toEntity(): PostEntity = PostEntity(
@@ -31,5 +32,6 @@ fun Post.toEntity(): PostEntity = PostEntity(
     alcance = alcance.name,
     carrera = carrera,
     fecha = fecha,
-    imageUrl = imageUrl
+    imageUrl = imageUrl,
+    allowedReactionIds = allowedReactionIds?.joinToString(",")
 )

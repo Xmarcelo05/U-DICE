@@ -1,11 +1,12 @@
 package com.example.udice.data.repository
 
+import android.net.Uri
 import com.example.udice.data.local.LocalDataSource
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
 import com.example.udice.data.remote.RemoteDataSource
+import com.example.udice.data.remote.supabase.CloudRequestException
 import com.example.udice.di.IoDispatcher
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
@@ -17,7 +18,8 @@ class PostRepositoryImpl @Inject constructor(
     private val localDataSource: LocalDataSource,
     private val remoteDataSource: RemoteDataSource,
     private val sessionRepository: SessionRepository,
-    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val images: PublicationImageStorage
 ) : PostRepository {
 
     private val usesCloud = sessionRepository is CloudSessionRepository
@@ -39,7 +41,7 @@ class PostRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun createPost(post: Post): Result<Post> = withContext(ioDispatcher) {
+    override suspend fun createPost(post: Post, image: Uri?): Result<Post> = withContext(ioDispatcher) {
         updateCache {
             val currentUser = sessionRepository.getCurrentUser()
                 ?: throw IllegalStateException("Debes iniciar sesión para publicar")
@@ -53,10 +55,18 @@ class PostRepositoryImpl @Inject constructor(
                 autorNombre = if (post.autorNombre.isNotBlank()) post.autorNombre else currentUser.nombre
             )
 
-            val createdPost = if (!usesCloud) {
-                postToCreate
+            val imageUrl = image?.let { images.save(it, currentUser.id, sessionRepository) }
+            val completePost = if (imageUrl != null) postToCreate.copy(imageUrl = imageUrl) else postToCreate
+            val createdPost = if (usesCloud) {
+                remoteDataSource.createPost(completePost).getOrElse { error ->
+                    // Ante un error de transporte, el servidor podría haber guardado el aviso.
+                    if (imageUrl != null && error is CloudRequestException && error.status in 400..499) {
+                        dataResult { images.remove(imageUrl, currentUser.id, sessionRepository) }
+                    }
+                    throw error
+                }
             } else {
-                remoteDataSource.createPost(postToCreate).getOrThrow()
+                completePost
             }
 
             // Persistir inmediatamente en Room (fuente única de verdad)
@@ -85,7 +95,8 @@ class PostRepositoryImpl @Inject constructor(
             val changes = existing.copy(
                 titulo = post.titulo,
                 descripcion = post.descripcion,
-                categoria = post.categoria
+                categoria = post.categoria,
+                allowedReactionIds = post.allowedReactionIds
             )
             val updatedPost = if (!usesCloud) {
                 changes
@@ -119,13 +130,15 @@ class PostRepositoryImpl @Inject constructor(
                 remoteDataSource.deletePost(id).getOrThrow()
             }
             localDataSource.deletePostById(id)
+            existing.imageUrl?.let { imageUrl ->
+                dataResult { images.remove(imageUrl, currentUser.id, sessionRepository) }
+            }
+            Unit
         }
     }
 
     private suspend fun <T> updateCache(action: suspend () -> T): Result<T> =
         cacheMutex.withLock {
-            runCatching { action() }.onFailure {
-                if (it is CancellationException) throw it
-            }
+            dataResult { action() }
         }
 }

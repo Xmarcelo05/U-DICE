@@ -43,16 +43,15 @@ import com.example.udice.ui.preferencias.PreferenciasRoute
 import com.example.udice.ui.theme.UDICETheme
 
 @Composable
-fun UDiceApp() {
+fun UDiceApp(auth: AuthStateHolder) {
     UDICETheme {
-        val auth = hiltViewModel<AuthStateHolder>()
         val session by auth.session.collectAsStateWithLifecycle()
         val form by auth.form.collectAsStateWithLifecycle()
         when (val current = session) {
             SessionState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            SessionState.SignedOut -> AuthScreen(form, auth::showRegistration, auth::login, auth::register)
+            SessionState.SignedOut -> AuthScreen(form, auth::showRegistration, auth::dismissVerification, auth::login, auth::register)
             is SessionState.SignedIn -> key(current.user.id) {
                 SignedInApp(current.user, !form.busy, form.message.takeIf { form.error }, auth::logout)
             }

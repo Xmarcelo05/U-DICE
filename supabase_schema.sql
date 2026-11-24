@@ -91,12 +91,12 @@ CREATE INDEX IF NOT EXISTS idx_preferencias_usuario ON preferencias_usuarios (us
 -- ====================================================================
 -- POLÍTICAS DE ACCESO PARA APP MÓVIL (U-DICE)
 -- ====================================================================
-ALTER TABLE IF EXISTS publicaciones DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS reacciones DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS preferencias_usuarios DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS facultades_cuentas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS usuarios DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS admin_users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS publicaciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS reacciones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS preferencias_usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS facultades_cuentas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS admin_users ENABLE ROW LEVEL SECURITY;
 
 -- ====================================================================
 -- DATOS SEMILLA (Admin por defecto y Facultades iniciales ULEAM)

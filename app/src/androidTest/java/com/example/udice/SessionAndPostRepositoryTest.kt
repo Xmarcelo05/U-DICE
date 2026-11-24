@@ -9,6 +9,7 @@ import com.example.udice.data.local.UDiceDatabase
 import com.example.udice.data.model.Facultad
 import com.example.udice.data.model.Rol
 import com.example.udice.data.repository.PostRepositoryImpl
+import com.example.udice.data.repository.PublicationImageStorage
 import com.example.udice.data.repository.ReactionsRepositoryImpl
 import com.example.udice.data.repository.SessionRepositoryImpl
 import com.example.udice.data.remote.FakeRemoteDataSource
@@ -36,7 +37,9 @@ class SessionAndPostRepositoryTest {
             val io = Dispatchers.IO
             val local = RoomLocalDataSource(db.postDao(), db.userDao(), db.preferenceDao(), db.savedPostDao(), io)
             val session = SessionRepositoryImpl(local, db.userDao(), io)
-            val posts = PostRepositoryImpl(local, FakeRemoteDataSource(io), session, io)
+            val posts = PostRepositoryImpl(
+                local, FakeRemoteDataSource(io), session, io, PublicationImageStorage(context, CloudHttpClient(io))
+            )
             val faculty = Facultad.CIENCIAS_VIDA_TECNOLOGIAS
             val post = checkNotNull(posts.getPostById("post-seed-1"))
 

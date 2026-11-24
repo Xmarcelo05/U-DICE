@@ -3,7 +3,9 @@ package com.example.udice.ui.auth
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,10 +20,19 @@ import com.example.udice.data.model.Facultad
 fun AuthScreen(
     state: AuthFormState,
     onShowRegistration: (Boolean) -> Unit,
+    onDismissVerification: () -> Unit,
     onLogin: (String, String) -> Unit,
     onRegister: (String, String, String, Facultad, String) -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
+    state.verificationEmail?.let { address ->
+        AlertDialog(
+            onDismissRequest = onDismissVerification,
+            title = { Text("Revisa tu correo") },
+            text = { Text("Enviamos un enlace de verificación a $address. Ábrelo antes de iniciar sesión. Si no lo encuentras, revisa la carpeta de correo no deseado.") },
+            confirmButton = { TextButton(onClick = onDismissVerification) { Text("Entendido") } }
+        )
+    }
     BackHandler(state.registering && !state.busy) { onShowRegistration(false) }
 
     if (state.registering) {

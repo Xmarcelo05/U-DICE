@@ -5,9 +5,14 @@ import com.example.udice.data.model.Rol
 import com.example.udice.data.model.User
 import com.example.udice.data.remote.supabase.CloudHttpClient
 import com.example.udice.data.remote.supabase.CloudRequestException
+import com.example.udice.di.IoDispatcher
+import java.security.SecureRandom
+import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -16,7 +21,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 @Singleton
-class CloudSessionRepository @Inject constructor(private val http: CloudHttpClient) : SessionRepository {
+class CloudSessionRepository @Inject constructor(
+    private val http: CloudHttpClient,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
+) : SessionRepository {
     private data class Tokens(val access: String, val refresh: String, val expiresAt: Long)
 
     private val mutex = Mutex()
@@ -30,16 +38,20 @@ class CloudSessionRepository @Inject constructor(private val http: CloudHttpClie
 
     override suspend fun register(
         name: String, email: String, password: String, faculty: Facultad, career: String
-    ): Result<Unit> = cloudResult {
+    ): Result<Unit> = ioResult {
         require(name.isNotBlank() && career.isNotBlank()) { "Completa el nombre y la carrera." }
         require(password.length in 8..128) { "La contraseña debe tener entre 8 y 128 caracteres." }
-        http.request("auth/v1/signup", "POST", body = JSONObject()
+        // El enlace confirma el correo. La sesión se abre después con la contraseña.
+        val challenge = ByteArray(32).also(SecureRandom()::nextBytes)
+        http.request("auth/v1/signup?redirect_to=com.example.udice%3A%2F%2Fconfirm-email", "POST", body = JSONObject()
+            .put("code_challenge", Base64.getUrlEncoder().withoutPadding().encodeToString(challenge))
+            .put("code_challenge_method", "s256")
             .put("email", email.trim())
             .put("password", password)
             .put("data", JSONObject().put("nombre", name.trim()).put("facultad", faculty.name).put("carrera", career.trim())))
     }
 
-    override suspend fun login(email: String, password: String): Result<Unit> = cloudResult {
+    override suspend fun login(email: String, password: String): Result<Unit> = ioResult {
         mutex.withLock {
             val newTokens = requestTokens("password", JSONObject().put("email", email.trim()).put("password", password))
             val identity = JSONObject(http.request("auth/v1/user", token = newTokens.access)).getString("id")
@@ -54,7 +66,7 @@ class CloudSessionRepository @Inject constructor(private val http: CloudHttpClie
         }
     }
 
-    override suspend fun logout(): Result<Unit> {
+    override suspend fun logout(): Result<Unit> = ioResult {
         mutex.withLock {
             try {
                 tokens?.let { http.request("auth/v1/logout?scope=local", "POST", it.access) }
@@ -64,10 +76,9 @@ class CloudSessionRepository @Inject constructor(private val http: CloudHttpClie
                 clearSession()
             }
         }
-        return Result.success(Unit)
     }
 
-    override suspend fun refreshFacultyAccounts(): Result<Unit> = cloudResult {
+    override suspend fun refreshFacultyAccounts(): Result<Unit> = ioResult {
         loadFacultyAccounts()
     }
 
@@ -91,7 +102,7 @@ class CloudSessionRepository @Inject constructor(private val http: CloudHttpClie
         }
     }
 
-    private suspend fun manage(action: String, body: JSONObject): Result<Unit> = cloudResult {
+    private suspend fun manage(action: String, body: JSONObject): Result<Unit> = ioResult {
         signedRequest { token ->
             http.request("functions/v1/udice-faculty-admin", "POST", token, body.put("action", action))
             if (action == "delete") facultyAccounts.value = facultyAccounts.value.filterNot { it.id == body.getString("id") }
@@ -99,6 +110,9 @@ class CloudSessionRepository @Inject constructor(private val http: CloudHttpClie
         // A read failure must not report a successfully completed mutation as failed.
         refreshFacultyAccounts()
     }
+
+    private suspend fun ioResult(action: suspend () -> Unit): Result<Unit> =
+        withContext(ioDispatcher) { dataResult { action() } }
 
     suspend fun <T> signedRequest(request: suspend (String) -> T): T = mutex.withLock {
         val current = tokens ?: error("Vuelve a iniciar sesión.")
@@ -132,10 +146,9 @@ class CloudSessionRepository @Inject constructor(private val http: CloudHttpClie
     )
 }
 
-internal suspend fun cloudResult(action: suspend () -> Unit): Result<Unit> =
+internal suspend fun <T> dataResult(action: suspend () -> T): Result<T> =
     try {
-        action()
-        Result.success(Unit)
+        Result.success(action())
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {

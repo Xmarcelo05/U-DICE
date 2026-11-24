@@ -1,5 +1,7 @@
 package com.example.udice.ui.feed
 
+import android.os.SystemClock
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.udice.data.model.Categoria
@@ -38,7 +40,8 @@ sealed interface InicioFeedUiState {
         val selectedCategory: String = "Todos",
         val isRefreshing: Boolean = false,
         val errorMessage: String? = null,
-        val reactionTypes: List<TipoReaccion> = TipoReaccion.defaults
+        val reactionTypes: List<TipoReaccion> = TipoReaccion.defaults,
+        val refreshVersion: Int = 0
     ) : InicioFeedUiState
     data class Error(val message: String) : InicioFeedUiState
 }
@@ -52,6 +55,8 @@ sealed interface InicioFeedEvent {
 
 val FEED_CATEGORIES = listOf("Todos", "Eventos", "Convocatorias", "Conferencias", "Avisos", "Otros")
 
+private const val BACKGROUND_REFRESH_AFTER_MS = 60_000L
+
 @HiltViewModel
 class InicioFeedStateHolder @Inject constructor(
     private val postRepository: PostRepository,
@@ -63,25 +68,51 @@ class InicioFeedStateHolder @Inject constructor(
 
     private val selectedCategory = MutableStateFlow("Todos")
     private val voteError = MutableStateFlow<String?>(null)
+    private data class FeedControls(
+        val category: String,
+        val refreshing: Boolean,
+        val error: String?,
+        val refreshVersion: Int
+    )
+
     private val isRefreshing = MutableStateFlow(false)
+    private val refreshVersion = MutableStateFlow(0)
+    private var backgroundSince: Long? = null
 
     init {
-        viewModelScope.launch {
-            sessionRepository.getCurrentUser() ?: return@launch
+        refreshFeed(resetScroll = false)
+    }
+
+    fun onBackground() {
+        backgroundSince = SystemClock.elapsedRealtime()
+    }
+
+    fun onForeground() {
+        val since = backgroundSince ?: return
+        backgroundSince = null
+        if (SystemClock.elapsedRealtime() - since >= BACKGROUND_REFRESH_AFTER_MS) {
             refreshFeed()
         }
     }
 
-    private suspend fun refreshFeed() {
-        val postsError = postRepository.syncPosts().exceptionOrNull()
-        val reactionsError = reactionsRepository.syncReactions().exceptionOrNull()
-        voteError.value = postsError?.let { "No se pudieron sincronizar los avisos." }
-            ?: reactionsError?.message
+    private fun refreshFeed(resetScroll: Boolean = true) {
+        if (isRefreshing.value) return
+        isRefreshing.value = true
+        viewModelScope.launch {
+            try {
+                sessionRepository.getCurrentUser() ?: return@launch
+                val postsError = postRepository.syncPosts().exceptionOrNull()
+                if (postsError == null && resetScroll) refreshVersion.value++
+                val reactionsError = reactionsRepository.syncReactions().exceptionOrNull()
+                voteError.value = postsError?.let { "No se pudieron sincronizar los avisos." }
+                    ?: reactionsError?.message
+            } finally {
+                isRefreshing.value = false
+            }
+        }
     }
 
-    private val filterFlow = combine(selectedCategory, isRefreshing, voteError) { category, refreshing, error ->
-        Triple(category, refreshing, error)
-    }
+    private val filterFlow = combine(selectedCategory, isRefreshing, voteError, refreshVersion, ::FeedControls)
 
     private fun feedFor(userId: String): Flow<InicioFeedUiState> = combine(
         postRepository.posts,
@@ -93,8 +124,7 @@ class InicioFeedStateHolder @Inject constructor(
         filterFlow
     ) { posts, preferences, reactionData, savedIds, filter ->
         val (reactionsMap, types) = reactionData
-        val category = filter.first
-        val refreshing = filter.second
+        val category = filter.category
 
         // 1. Filtrar por preferencias de facultad (RF 3 y RF 6)
         val filteredByPrefs = if (preferences.isEmpty()) {
@@ -141,9 +171,10 @@ class InicioFeedStateHolder @Inject constructor(
             posts = items,
             categories = FEED_CATEGORIES,
             selectedCategory = category,
-            isRefreshing = refreshing,
-            errorMessage = filter.third,
-            reactionTypes = types
+            isRefreshing = filter.refreshing,
+            errorMessage = filter.error,
+            reactionTypes = types,
+            refreshVersion = filter.refreshVersion
         )
     }
 
@@ -173,17 +204,7 @@ class InicioFeedStateHolder @Inject constructor(
                     savedPostsRepository.toggleSavePost(user.id, event.postId)
                 }
             }
-            InicioFeedEvent.Refresh -> {
-                if (isRefreshing.value) return
-                isRefreshing.value = true
-                viewModelScope.launch {
-                    try {
-                        refreshFeed()
-                    } finally {
-                        isRefreshing.value = false
-                    }
-                }
-            }
+            InicioFeedEvent.Refresh -> refreshFeed()
         }
     }
 }
