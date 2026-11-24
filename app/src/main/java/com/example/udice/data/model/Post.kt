@@ -13,5 +13,10 @@ data class Post(
     val fecha: Long = System.currentTimeMillis(),
     val imageUrl: String? = null,
     val allowedReactionIds: List<String>? = null,
-    val videoUrl: String? = null
-)
+    val videoUrl: String? = null,
+    val additionalImageUrls: List<String> = emptyList()
+) {
+    val imageUrls: List<String> get() = listOfNotNull(imageUrl) + additionalImageUrls
+}
+
+const val MAX_PUBLICATION_IMAGES = 4

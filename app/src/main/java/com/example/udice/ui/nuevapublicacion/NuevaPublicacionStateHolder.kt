@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.udice.data.model.Alcance
 import com.example.udice.data.model.Categoria
 import com.example.udice.data.model.Facultad
+import com.example.udice.data.model.MAX_PUBLICATION_IMAGES
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
 import com.example.udice.data.repository.PostRepository
@@ -21,7 +22,7 @@ sealed interface NuevaPublicacionUiState {
     data object Loading : NuevaPublicacionUiState
     data class Content(
         val titulo: String = "", val descripcion: String = "", val categoria: String = "Evento",
-        val image: Uri? = null, val video: Uri? = null,
+        val photos: List<Uri> = emptyList(), val video: Uri? = null,
         val uploadProgress: Int? = null, val isSubmitting: Boolean = false,
         val error: String? = null, val published: Boolean = false
     ) : NuevaPublicacionUiState
@@ -32,7 +33,8 @@ sealed interface NuevaPublicacionEvent {
     data class TitleChanged(val value: String) : NuevaPublicacionEvent
     data class DescriptionChanged(val value: String) : NuevaPublicacionEvent
     data class CategorySelected(val value: String) : NuevaPublicacionEvent
-    data class ImageSelected(val uri: Uri?) : NuevaPublicacionEvent
+    data class ImagesSelected(val photos: List<Uri>) : NuevaPublicacionEvent
+    data class RemoveImage(val index: Int) : NuevaPublicacionEvent
     data class VideoSelected(val uri: Uri?) : NuevaPublicacionEvent
     data object Submit : NuevaPublicacionEvent
     data object DismissSuccess : NuevaPublicacionEvent
@@ -53,14 +55,22 @@ class NuevaPublicacionStateHolder @Inject constructor(
             is NuevaPublicacionEvent.TitleChanged -> _uiState.value = current.copy(titulo = event.value, error = null)
             is NuevaPublicacionEvent.DescriptionChanged -> _uiState.value = current.copy(descripcion = event.value, error = null)
             is NuevaPublicacionEvent.CategorySelected -> _uiState.value = current.copy(categoria = event.value, error = null)
-            is NuevaPublicacionEvent.ImageSelected -> _uiState.value = current.copy(
-                image = event.uri, video = if (event.uri != null) null else current.video, error = null
+            is NuevaPublicacionEvent.ImagesSelected -> {
+                val selection = (current.photos + event.photos).distinct()
+                _uiState.value = if (selection.size <= MAX_PUBLICATION_IMAGES) {
+                    current.copy(photos = selection, video = null, error = null)
+                } else {
+                    current.copy(error = "Puedes adjuntar hasta cuatro imágenes.")
+                }
+            }
+            is NuevaPublicacionEvent.RemoveImage -> _uiState.value = current.copy(
+                photos = current.photos.filterIndexed { index, _ -> index != event.index }, error = null
             )
             is NuevaPublicacionEvent.VideoSelected -> _uiState.value = current.copy(
-                video = event.uri, image = if (event.uri != null) null else current.image, error = null
+                video = event.uri, photos = if (event.uri != null) emptyList() else current.photos, error = null
             )
             NuevaPublicacionEvent.DismissSuccess -> _uiState.value = current.copy(
-                titulo = "", descripcion = "", categoria = "Evento", image = null, video = null, published = false, error = null
+                titulo = "", descripcion = "", categoria = "Evento", photos = emptyList(), video = null, published = false, error = null
             )
             NuevaPublicacionEvent.Submit -> submit(current)
         }
@@ -89,7 +99,7 @@ class NuevaPublicacionStateHolder @Inject constructor(
                 facultad = user.facultad ?: Facultad.CIENCIAS_VIDA_TECNOLOGIAS,
                 alcance = Alcance.GENERAL
             )
-            postRepository.createPost(post, form.image, form.video) { progress ->
+            postRepository.createPost(post, form.photos, form.video) { progress ->
                 _uiState.value = form.copy(isSubmitting = true, uploadProgress = progress)
             }
                 .onSuccess { _uiState.value = form.copy(published = true) }

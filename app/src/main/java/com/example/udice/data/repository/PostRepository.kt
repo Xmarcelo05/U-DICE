@@ -11,7 +11,7 @@ interface PostRepository {
     suspend fun syncPosts(): Result<Unit>
     suspend fun createPost(
         post: Post,
-        image: Uri? = null,
+        photos: List<Uri> = emptyList(),
         video: Uri? = null,
         onUploadProgress: (Int) -> Unit = {}
     ): Result<Post>

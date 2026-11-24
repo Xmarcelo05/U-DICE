@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import com.example.udice.ui.components.PublicationImage
+import com.example.udice.ui.components.PublicationImageGrid
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -183,8 +184,12 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            post.imageUrl?.takeIf(String::isNotBlank)?.let { url ->
-                PublicationImage(url, if (post.videoUrl == null) "Imagen de ${post.titulo}" else "Miniatura del video")
+            if (post.imageUrls.isNotEmpty()) {
+                if (post.videoUrl != null) {
+                    post.imageUrl?.let { PublicationImage(it, "Miniatura del video") }
+                } else {
+                    PublicationImageGrid(post.imageUrls)
+                }
                 Spacer(modifier = Modifier.height(10.dp))
             }
 

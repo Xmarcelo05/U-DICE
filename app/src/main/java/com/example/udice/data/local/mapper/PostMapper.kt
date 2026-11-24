@@ -5,6 +5,7 @@ import com.example.udice.data.model.Alcance
 import com.example.udice.data.model.Categoria
 import com.example.udice.data.model.Facultad
 import com.example.udice.data.model.Post
+import org.json.JSONArray
 
 fun PostEntity.toDomain(): Post = Post(
     id = id,
@@ -19,7 +20,11 @@ fun PostEntity.toDomain(): Post = Post(
     fecha = fecha,
     imageUrl = imageUrl,
     allowedReactionIds = allowedReactionIds?.split(','),
-    videoUrl = videoUrl
+    videoUrl = videoUrl,
+    additionalImageUrls = additionalImageUrls?.let { json ->
+        val urls = JSONArray(json)
+        List(urls.length()) { urls.getString(it) }
+    }.orEmpty()
 )
 
 fun Post.toEntity(): PostEntity = PostEntity(
@@ -35,5 +40,6 @@ fun Post.toEntity(): PostEntity = PostEntity(
     fecha = fecha,
     imageUrl = imageUrl,
     allowedReactionIds = allowedReactionIds?.joinToString(","),
-    videoUrl = videoUrl
+    videoUrl = videoUrl,
+    additionalImageUrls = additionalImageUrls.takeIf { it.isNotEmpty() }?.let { JSONArray(it).toString() }
 )

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -6,6 +8,21 @@ plugins {
 }
 
 val useSupabase = providers.gradleProperty("udiceSupabase").map { it.toBooleanStrict() }.orElse(false)
+
+val localProperties = Properties().apply {
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.orNull
+        ?.reader()?.use { load(it) }
+}
+val supabaseUrl = localProperties.getProperty("UDICE_SUPABASE_URL", "").trim().trimEnd('/').removeSuffix("/rest/v1")
+val supabaseKey = localProperties.getProperty("UDICE_SUPABASE_PUBLISHABLE_KEY", "").trim()
+
+if (useSupabase.get()) {
+    require(supabaseUrl.matches(Regex("https://[A-Za-z0-9.-]+")) &&
+        supabaseKey.matches(Regex("sb_publishable_[A-Za-z0-9_-]+"))
+    ) {
+        "Configura UDICE_SUPABASE_URL y UDICE_SUPABASE_PUBLISHABLE_KEY en local.properties. Consulta el README."
+    }
+}
 
 android {
     namespace = "com.example.udice"
@@ -20,6 +37,9 @@ android {
         versionCode = 1
         versionName = "1.0"
         buildConfigField("boolean", "UDICE_SUPABASE", useSupabase.get().toString())
+
+        buildConfigField("String", "UDICE_SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "UDICE_SUPABASE_PUBLISHABLE_KEY", "\"$supabaseKey\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

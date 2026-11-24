@@ -50,7 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.udice.ui.components.PublicationImage
+import com.example.udice.data.model.MAX_PUBLICATION_IMAGES
+import com.example.udice.ui.components.PublicationImageGrid
 import com.example.udice.ui.theme.AzulPrincipal
 import com.example.udice.ui.theme.Blanco
 import com.example.udice.ui.theme.ColorAviso
@@ -71,20 +72,27 @@ fun NuevaPublicacionScreen(
     onTituloChange: (String) -> Unit,
     onDescripcionChange: (String) -> Unit,
     onCategoriaChange: (String) -> Unit,
-    onImageSelected: (Uri?) -> Unit,
+    onImagesSelected: (List<Uri>) -> Unit,
+    onRemoveImage: (Int) -> Unit,
     onVideoSelected: (Uri?) -> Unit,
     onSubmit: () -> Unit,
     onDismissSuccess: () -> Unit,
     onPublicacionExitosa: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) onImageSelected(uri)
+    val remaining = MAX_PUBLICATION_IMAGES - state.photos.size
+    val singlePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) onImagesSelected(listOf(uri))
+    }
+    val multiplePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(maxOf(2, remaining))
+    ) { photos ->
+        if (photos.isNotEmpty()) onImagesSelected(photos)
     }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) onVideoSelected(uri)
     }
-    val hasImage = state.image != null
+    val hasImage = state.photos.isNotEmpty()
 
     val categorias = listOf(
         "Evento" to ColorEvento,
@@ -213,8 +221,9 @@ fun NuevaPublicacionScreen(
                     border = BorderStroke(1.dp, if (hasImage) AzulPrincipal else GrisBordes),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(enabled = !state.isSubmitting) {
-                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        .clickable(enabled = !state.isSubmitting && remaining > 0) {
+                            val request = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            if (remaining == 1) singlePicker.launch(request) else multiplePicker.launch(request)
                         }
                 ) {
                     Row(
@@ -230,7 +239,7 @@ fun NuevaPublicacionScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (hasImage) "Cambiar imagen" else "Agregar imagen",
+                            text = "Imágenes (${state.photos.size}/$MAX_PUBLICATION_IMAGES)",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (hasImage) AzulPrincipal else GrisPizarra
@@ -238,12 +247,9 @@ fun NuevaPublicacionScreen(
                     }
                 }
 
-                state.image?.let { uri ->
+                if (hasImage) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    PublicationImage(uri, "Vista previa de la imagen")
-                    TextButton(onClick = { onImageSelected(null) }, enabled = !state.isSubmitting) {
-                        Text("Quitar imagen")
-                    }
+                    PublicationImageGrid(state.photos, onRemove = onRemoveImage.takeUnless { state.isSubmitting })
                 }
 
                 OutlinedButton(
@@ -351,7 +357,8 @@ fun NuevaPublicacionRoute(
             onTituloChange = { stateHolder.onEvent(NuevaPublicacionEvent.TitleChanged(it)) },
             onDescripcionChange = { stateHolder.onEvent(NuevaPublicacionEvent.DescriptionChanged(it)) },
             onCategoriaChange = { stateHolder.onEvent(NuevaPublicacionEvent.CategorySelected(it)) },
-            onImageSelected = { stateHolder.onEvent(NuevaPublicacionEvent.ImageSelected(it)) },
+            onImagesSelected = { stateHolder.onEvent(NuevaPublicacionEvent.ImagesSelected(it)) },
+            onRemoveImage = { stateHolder.onEvent(NuevaPublicacionEvent.RemoveImage(it)) },
             onVideoSelected = { stateHolder.onEvent(NuevaPublicacionEvent.VideoSelected(it)) },
             onSubmit = { stateHolder.onEvent(NuevaPublicacionEvent.Submit) },
             onDismissSuccess = { stateHolder.onEvent(NuevaPublicacionEvent.DismissSuccess) },
@@ -368,7 +375,7 @@ fun NuevaPublicacionScreenPreview() {
     UDICETheme {
         NuevaPublicacionScreen(
             state = NuevaPublicacionUiState.Content(), onTituloChange = {}, onDescripcionChange = {},
-            onCategoriaChange = {}, onImageSelected = {}, onVideoSelected = {}, onSubmit = {}, onDismissSuccess = {}, onPublicacionExitosa = {}
+            onCategoriaChange = {}, onImagesSelected = {}, onRemoveImage = {}, onVideoSelected = {}, onSubmit = {}, onDismissSuccess = {}, onPublicacionExitosa = {}
         )
     }
 }

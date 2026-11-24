@@ -2,12 +2,14 @@ package com.example.udice.data.repository
 
 import android.net.Uri
 import com.example.udice.data.local.LocalDataSource
+import com.example.udice.data.model.MAX_PUBLICATION_IMAGES
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
 import com.example.udice.data.remote.RemoteDataSource
 import com.example.udice.data.remote.supabase.CloudRequestException
 import com.example.udice.di.IoDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,7 +45,7 @@ class PostRepositoryImpl @Inject constructor(
 
     override suspend fun createPost(
         post: Post,
-        image: Uri?,
+        photos: List<Uri>,
         video: Uri?,
         onUploadProgress: (Int) -> Unit
     ): Result<Post> = withContext(ioDispatcher) {
@@ -60,18 +62,20 @@ class PostRepositoryImpl @Inject constructor(
                 autorNombre = if (post.autorNombre.isNotBlank()) post.autorNombre else currentUser.nombre
             )
 
-            require(image == null || video == null) { "Adjunta una imagen o un video." }
+            require(photos.size <= MAX_PUBLICATION_IMAGES) { "Adjunta hasta cuatro imágenes." }
+            require(photos.isEmpty() || video == null) { "Adjunta imágenes o un video." }
             val uploadedVideo = video?.let { images.saveVideo(it, currentUser.id, sessionRepository, onUploadProgress) }
-            val imageUrl = uploadedVideo?.thumbnailUrl ?: image?.let { images.save(it, currentUser.id, sessionRepository) }
+            val uploadedPhotos = uploadPhotos(photos, currentUser.id)
             val completePost = postToCreate.copy(
-                imageUrl = imageUrl ?: postToCreate.imageUrl,
+                imageUrl = uploadedVideo?.thumbnailUrl ?: uploadedPhotos.firstOrNull() ?: postToCreate.imageUrl,
+                additionalImageUrls = if (uploadedPhotos.isNotEmpty()) uploadedPhotos.drop(1) else postToCreate.additionalImageUrls,
                 videoUrl = uploadedVideo?.videoUrl ?: postToCreate.videoUrl
             )
             val createdPost = if (usesCloud) {
                 remoteDataSource.createPost(completePost).getOrElse { error ->
                     // Ante un error de transporte, el servidor podría haber guardado el aviso.
                     if (error is CloudRequestException && error.status in 400..499) {
-                        removeMedia(listOfNotNull(imageUrl, uploadedVideo?.videoUrl), currentUser.id)
+                        removeMedia(uploadedPhotos + listOfNotNull(uploadedVideo?.thumbnailUrl, uploadedVideo?.videoUrl), currentUser.id)
                     }
                     throw error
                 }
@@ -140,8 +144,21 @@ class PostRepositoryImpl @Inject constructor(
                 remoteDataSource.deletePost(id).getOrThrow()
             }
             localDataSource.deletePostById(id)
-            removeMedia(listOfNotNull(existing.imageUrl, existing.videoUrl), currentUser.id)
+            removeMedia(existing.imageUrls + listOfNotNull(existing.videoUrl), currentUser.id)
         }
+    }
+
+    private suspend fun uploadPhotos(photos: List<Uri>, userId: String): List<String> {
+        val uploaded = mutableListOf<String>()
+        try {
+            for (photo in photos) {
+                uploaded += images.save(photo, userId, sessionRepository)
+            }
+        } catch (error: Exception) {
+            withContext(NonCancellable) { removeMedia(uploaded, userId) }
+            throw error
+        }
+        return uploaded
     }
 
     private suspend fun removeMedia(urls: List<String>, userId: String) {

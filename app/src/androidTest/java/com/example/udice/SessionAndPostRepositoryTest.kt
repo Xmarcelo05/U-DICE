@@ -87,7 +87,15 @@ class SessionAndPostRepositoryTest {
                 db.postDao(), db.userDao(), db.preferenceDao(), db.savedPostDao(), Dispatchers.IO
             )
             val post = checkNotNull(local.getPostById("post-seed-1"))
-            val updated = post.copy(titulo = "Aviso sincronizado")
+            val updated = post.copy(
+                titulo = "Aviso sincronizado",
+                imageUrl = "https://example.com/primera.jpg",
+                additionalImageUrls = listOf(
+                    "https://example.com/segunda.jpg",
+                    "https://example.com/tercera.jpg",
+                    "https://example.com/cuarta.jpg"
+                )
+            )
             val deleted = post.copy(id = "remote-deletion")
             local.insertPost(deleted)
             local.setPostSaved("reader", post.id, true)

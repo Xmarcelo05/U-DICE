@@ -70,6 +70,11 @@ class SupabaseRemoteDataSource @Inject constructor(
             }
         }
 
+    private fun JSONObject.additionalImages(): List<String> =
+        optJSONArray("additional_image_urls")?.let { urls ->
+            List(urls.length()) { urls.getString(it) }
+        }.orEmpty()
+
     override suspend fun getPosts(): Result<List<Post>> {
         val result = if (BuildConfig.UDICE_SUPABASE) getCloudPostRows()
             else client.get("publicaciones", "select=*&order=fecha.desc")
@@ -92,7 +97,8 @@ class SupabaseRemoteDataSource @Inject constructor(
                         fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
                         imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
                         allowedReactionIds = obj.reactionIds(),
-                        videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url")
+                        videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url"),
+                        additionalImageUrls = obj.additionalImages()
                     )
                 )
             }
@@ -127,7 +133,8 @@ class SupabaseRemoteDataSource @Inject constructor(
                 fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
                 imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
                 allowedReactionIds = obj.reactionIds(),
-                videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url")
+                videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url"),
+                additionalImageUrls = obj.additionalImages()
             )
         }.recoverCatching {
             if (BuildConfig.UDICE_SUPABASE) throw it
@@ -147,6 +154,7 @@ class SupabaseRemoteDataSource @Inject constructor(
             if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
         if (post.videoUrl != null) json.put("video_url", post.videoUrl)
+        if (post.additionalImageUrls.isNotEmpty()) json.put("additional_image_urls", JSONArray(post.additionalImageUrls))
         val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("POST", body = json.put("id", post.id))
             else client.post("publicaciones", json.toString())
         return result.mapCatching { jsonStr ->
