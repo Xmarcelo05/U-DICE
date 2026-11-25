@@ -4,6 +4,8 @@ import com.example.udice.data.model.Alcance
 import com.example.udice.data.model.Categoria
 import com.example.udice.data.model.Facultad
 import com.example.udice.data.model.Post
+import com.example.udice.data.model.FeedCursor
+import com.example.udice.data.model.PostPage
 import com.example.udice.data.model.Rol
 import com.example.udice.data.model.User
 import com.example.udice.di.IoDispatcher
@@ -136,6 +138,12 @@ class FakeRemoteDataSource @Inject constructor(
         "user-lector-1" to mutableSetOf("post-1", "post-2")
     )
 
+    override suspend fun searchPosts(search: com.example.udice.data.model.PostSearch, after: FeedCursor?): Result<com.example.udice.data.model.PostSearchPage> =
+        Result.success(com.example.udice.data.model.PostSearchPage(emptyList(), null))
+
+    override suspend fun getFeedPage(after: FeedCursor?): Result<PostPage> =
+        getPosts().map { PostPage(it, null) }
+
     override suspend fun getPosts(): Result<List<Post>> = withContext(ioDispatcher) {
         delay(networkDelayMs)
         mutex.withLock {
@@ -158,6 +166,8 @@ class FakeRemoteDataSource @Inject constructor(
             Result.success(post)
         }
     }
+
+    override suspend fun updatePostMedia(post: Post): Result<Post> = updatePost(post)
 
     override suspend fun updatePost(post: Post): Result<Post> = withContext(ioDispatcher) {
         delay(networkDelayMs)

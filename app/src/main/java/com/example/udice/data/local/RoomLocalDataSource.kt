@@ -44,6 +44,10 @@ class RoomLocalDataSource @Inject constructor(
         postDao.insertPost(post.toEntity())
     }
 
+    override suspend fun insertPosts(posts: List<Post>): Unit = withContext(ioDispatcher) {
+        postDao.insertPosts(posts.map { it.toEntity() })
+    }
+
     override suspend fun replacePosts(posts: List<Post>): Unit = withContext(ioDispatcher) {
         postDao.replacePosts(posts.map { it.toEntity() })
     }

@@ -20,3 +20,7 @@ data class Post(
 }
 
 const val MAX_PUBLICATION_IMAGES = 4
+const val FEED_PAGE_SIZE = 50
+
+data class FeedCursor(val date: String, val id: String)
+data class PostPage(val posts: List<Post>, val next: FeedCursor?)

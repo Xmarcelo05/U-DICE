@@ -4,6 +4,16 @@ import android.net.Uri
 import com.example.udice.data.local.LocalDataSource
 import com.example.udice.data.model.MAX_PUBLICATION_IMAGES
 import com.example.udice.data.model.Post
+import com.example.udice.data.model.FeedCursor
+import com.example.udice.data.model.PostPage
+import com.example.udice.data.model.PostSearch
+import com.example.udice.data.model.PostSearchPage
+import com.example.udice.data.model.SEARCH_PAGE_SIZE
+import com.example.udice.data.model.toSearchResult
+import java.time.Instant
+import java.text.Normalizer
+import java.util.Locale
+import kotlinx.coroutines.flow.first
 import com.example.udice.data.model.Rol
 import com.example.udice.data.remote.RemoteDataSource
 import com.example.udice.data.remote.supabase.CloudRequestException
@@ -35,11 +45,54 @@ class PostRepositoryImpl @Inject constructor(
         localDataSource.getPostById(id)
     }
 
+    override suspend fun searchPosts(search: PostSearch, after: FeedCursor?): Result<PostSearchPage> = withContext(ioDispatcher) {
+        if (usesCloud) return@withContext remoteDataSource.searchPosts(search, after)
+        dataResult {
+            val from = search.from?.let { Instant.parse(it).toEpochMilli() }
+            val until = search.until?.let { Instant.parse(it).toEpochMilli() }
+            val cursorTime = after?.let { Instant.parse(it.date).toEpochMilli() }
+            val terms = search.query.normalizedForSearch().split(' ').filter(String::isNotEmpty)
+            val matches = posts.first().asSequence()
+                .filter { post ->
+                    (search.category.isEmpty() || post.categoria.name == search.category) &&
+                        (search.faculty.isEmpty() || post.facultad.name == search.faculty) &&
+                        (from == null || post.fecha >= from) && (until == null || post.fecha < until) &&
+                        (after == null || cursorTime == null || post.fecha < cursorTime ||
+                            (post.fecha == cursorTime && post.id < after.id)) &&
+                        terms.all { it in "${post.titulo} ${post.descripcion}".normalizedForSearch() }
+                }
+                .sortedWith(compareByDescending<Post> { it.fecha }.thenByDescending { it.id })
+                .take(SEARCH_PAGE_SIZE)
+                .toList()
+            val next = matches.lastOrNull()?.takeIf { matches.size == SEARCH_PAGE_SIZE }?.let {
+                FeedCursor(Instant.ofEpochMilli(it.fecha).toString(), it.id)
+            }
+            PostSearchPage(matches.map(Post::toSearchResult), next)
+        }
+    }
+
+    override suspend fun loadPostIfMissing(id: String): Result<Unit> = withContext(ioDispatcher) {
+        updateCache {
+            if (usesCloud && localDataSource.getPostById(id) == null) {
+                remoteDataSource.getPostById(id).getOrThrow()?.let { localDataSource.insertPost(it) }
+            }
+        }
+    }
+
     override suspend fun syncPosts(): Result<Unit> = withContext(ioDispatcher) {
         updateCache {
             if (usesCloud) {
                 localDataSource.replacePosts(remoteDataSource.getPosts().getOrThrow())
             }
+        }
+    }
+
+    override suspend fun loadFeedPage(after: FeedCursor?): Result<PostPage> = withContext(ioDispatcher) {
+        updateCache {
+            if (!usesCloud) return@updateCache PostPage(localDataSource.observePosts().first(), null)
+            val page = remoteDataSource.getFeedPage(after).getOrThrow()
+            localDataSource.insertPosts(page.posts)
+            page
         }
     }
 
@@ -123,6 +176,55 @@ class PostRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateMedia(post: Post, edit: PostMediaEdit): Result<Post> = withContext(ioDispatcher) {
+        updateCache {
+            val user = sessionRepository.getCurrentUser()
+                ?: error("Debes iniciar sesión para editar publicaciones.")
+            check(user.rol == Rol.ASO) { "Solo una cuenta ASO puede editar publicaciones." }
+            val existing = if (usesCloud) remoteDataSource.getPostById(post.id).getOrThrow()
+                else localDataSource.getPostById(post.id)
+            check(existing != null && existing.autorId == user.id) { "Solo el autor puede editar la multimedia." }
+
+            val existingPhotos = if (existing.videoUrl == null) existing.imageUrls else emptyList()
+            require(edit.retainedPhotos.all { it in existingPhotos } && (!edit.keepVideo || existing.videoUrl != null)) {
+                "La multimedia cambió. Vuelve a abrir el editor."
+            }
+            require(edit.retainedPhotos.size + edit.newPhotos.size <= MAX_PUBLICATION_IMAGES) {
+                "Adjunta hasta cuatro imágenes."
+            }
+            val hasPhotos = edit.retainedPhotos.isNotEmpty() || edit.newPhotos.isNotEmpty()
+            require(!hasPhotos || (!edit.keepVideo && edit.newVideo == null)) { "Adjunta imágenes o un video." }
+            require(!edit.keepVideo || edit.newVideo == null) { "Adjunta un solo video." }
+
+            val video = edit.newVideo?.let { images.saveVideo(it, user.id, sessionRepository) {} }
+            val uploaded = uploadPhotos(edit.newPhotos, user.id)
+            val photos = edit.retainedPhotos + uploaded
+            val changes = existing.copy(
+                titulo = post.titulo,
+                descripcion = post.descripcion,
+                categoria = post.categoria,
+                allowedReactionIds = post.allowedReactionIds,
+                imageUrl = video?.thumbnailUrl ?: if (edit.keepVideo) existing.imageUrl else photos.firstOrNull(),
+                additionalImageUrls = photos.drop(1),
+                videoUrl = video?.videoUrl ?: existing.videoUrl.takeIf { edit.keepVideo }
+            )
+            val updated = if (usesCloud) {
+                remoteDataSource.updatePostMedia(changes).getOrElse { error ->
+                    if (error is CloudRequestException && error.status in 400..499) {
+                        removeMedia(uploaded + listOfNotNull(video?.thumbnailUrl, video?.videoUrl), user.id)
+                    }
+                    throw error
+                }
+            } else changes
+
+            localDataSource.insertPost(updated)
+            val previous = existing.imageUrls + listOfNotNull(existing.videoUrl)
+            val current = updated.imageUrls + listOfNotNull(updated.videoUrl)
+            removeMedia(previous - current.toSet(), user.id)
+            updated
+        }
+    }
+
     override suspend fun deletePost(id: String): Result<Unit> = withContext(ioDispatcher) {
         updateCache {
             val currentUser = sessionRepository.getCurrentUser()
@@ -170,3 +272,7 @@ class PostRepositoryImpl @Inject constructor(
             dataResult { action() }
         }
 }
+
+private val searchAccents = Regex("\\p{M}+")
+internal fun String.normalizedForSearch() =
+    Normalizer.normalize(lowercase(Locale.ROOT), Normalizer.Form.NFD).replace(searchAccents, "")

@@ -1,6 +1,14 @@
 package com.example.udice.data.remote.supabase
 
+import android.net.Uri
 import com.example.udice.BuildConfig
+import com.example.udice.data.model.FEED_PAGE_SIZE
+import com.example.udice.data.model.FeedCursor
+import com.example.udice.data.model.PostPage
+import com.example.udice.data.model.PostSearch
+import com.example.udice.data.model.PostSearchPage
+import com.example.udice.data.model.PostSearchResult
+import com.example.udice.data.model.SEARCH_PAGE_SIZE
 import com.example.udice.data.repository.CloudSessionRepository
 import com.example.udice.data.repository.dataResult
 import com.example.udice.data.model.Alcance
@@ -70,10 +78,75 @@ class SupabaseRemoteDataSource @Inject constructor(
             }
         }
 
+    private fun JSONObject.toPost(): Post =
+    Post(
+        id = getString("id"),
+        autorId = getString("autor_id"),
+        autorNombre = getString("autor_nombre"),
+        titulo = getString("titulo"),
+        descripcion = getString("descripcion"),
+        categoria = runCatching { Categoria.valueOf(getString("categoria")) }.getOrDefault(Categoria.AVISO),
+        facultad = Facultad.fromDisplayName(getString("facultad")) ?: Facultad.CIENCIAS_VIDA_TECNOLOGIAS,
+        alcance = runCatching { Alcance.valueOf(getString("alcance")) }.getOrDefault(Alcance.GENERAL),
+        carrera = if (has("carrera") && !isNull("carrera")) getString("carrera") else null,
+        fecha = parseTimestamp(if (has("fecha") && !isNull("fecha")) getString("fecha") else null),
+        imageUrl = if (has("image_url") && !isNull("image_url")) getString("image_url") else null,
+        allowedReactionIds = reactionIds(),
+        videoUrl = if (isNull("video_url")) null else getString("video_url"),
+        additionalImageUrls = additionalImages()
+    )
+
     private fun JSONObject.additionalImages(): List<String> =
         optJSONArray("additional_image_urls")?.let { urls ->
             List(urls.length()) { urls.getString(it) }
         }.orEmpty()
+
+    override suspend fun searchPosts(search: PostSearch, after: FeedCursor?): Result<PostSearchPage> = dataResult {
+        val body = JSONObject()
+            .put("texto", search.query)
+            .put("categoria_filtro", search.category.ifBlank { null } ?: JSONObject.NULL)
+            .put("facultad_filtro", Facultad.entries.find { it.name == search.faculty }?.displayName ?: JSONObject.NULL)
+            .put("desde", search.from ?: JSONObject.NULL)
+            .put("hasta", search.until ?: JSONObject.NULL)
+            .put("cursor_fecha", after?.date ?: JSONObject.NULL)
+            .put("cursor_id", after?.id ?: JSONObject.NULL)
+        val rows = session.signedRequest { token ->
+            JSONArray(cloud.request("rest/v1/rpc/udice_buscar_publicaciones", "POST", token, body))
+        }
+        val results = List(rows.length()) { index ->
+            val row = rows.getJSONObject(index)
+            PostSearchResult(
+                id = row.getString("id"),
+                title = row.getString("titulo"),
+                excerpt = row.getString("extracto"),
+                category = Categoria.entries.find { it.name == row.getString("categoria") } ?: Categoria.AVISO,
+                faculty = Facultad.fromDisplayName(row.getString("facultad")) ?: Facultad.CIENCIAS_VIDA_TECNOLOGIAS,
+                date = parseTimestamp(row.getString("fecha"))
+            )
+        }
+        val next = if (rows.length() == SEARCH_PAGE_SIZE) {
+            val last = rows.getJSONObject(rows.length() - 1)
+            FeedCursor(last.getString("fecha"), last.getString("id"))
+        } else null
+        PostSearchPage(results, next)
+    }
+
+    override suspend fun getFeedPage(after: FeedCursor?): Result<PostPage> {
+        val boundary = after?.let {
+            val date = Uri.encode(it.date)
+            "&or=(fecha.lt.$date,and(fecha.eq.$date,id.lt.${it.id}))"
+        }.orEmpty()
+        return cloudPosts("GET", "select=*&order=fecha.desc,id.desc&limit=$FEED_PAGE_SIZE$boundary")
+            .mapCatching { response ->
+                val rows = JSONArray(response)
+                val posts = List(rows.length()) { rows.getJSONObject(it).toPost() }
+                val next = if (rows.length() == FEED_PAGE_SIZE) {
+                    val last = rows.getJSONObject(rows.length() - 1)
+                    FeedCursor(last.getString("fecha"), last.getString("id"))
+                } else null
+                PostPage(posts, next)
+            }
+    }
 
     override suspend fun getPosts(): Result<List<Post>> {
         val result = if (BuildConfig.UDICE_SUPABASE) getCloudPostRows()
@@ -83,24 +156,7 @@ class SupabaseRemoteDataSource @Inject constructor(
             val posts = mutableListOf<Post>()
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
-                posts.add(
-                    Post(
-                        id = obj.getString("id"),
-                        autorId = obj.getString("autor_id"),
-                        autorNombre = obj.getString("autor_nombre"),
-                        titulo = obj.getString("titulo"),
-                        descripcion = obj.getString("descripcion"),
-                        categoria = runCatching { Categoria.valueOf(obj.getString("categoria")) }.getOrDefault(Categoria.AVISO),
-                        facultad = Facultad.fromDisplayName(obj.getString("facultad")) ?: Facultad.CIENCIAS_VIDA_TECNOLOGIAS,
-                        alcance = runCatching { Alcance.valueOf(obj.getString("alcance")) }.getOrDefault(Alcance.GENERAL),
-                        carrera = if (obj.has("carrera") && !obj.isNull("carrera")) obj.getString("carrera") else null,
-                        fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
-                        imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
-                        allowedReactionIds = obj.reactionIds(),
-                        videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url"),
-                        additionalImageUrls = obj.additionalImages()
-                    )
-                )
+                posts.add(obj.toPost())
             }
             if (posts.isEmpty() && !BuildConfig.UDICE_SUPABASE) {
                 fallback.getPosts().getOrThrow()
@@ -120,22 +176,7 @@ class SupabaseRemoteDataSource @Inject constructor(
             val array = JSONArray(jsonStr)
             if (array.length() == 0) return@mapCatching if (BuildConfig.UDICE_SUPABASE) null else fallback.getPostById(id).getOrNull()
             val obj = array.getJSONObject(0)
-            Post(
-                id = obj.getString("id"),
-                autorId = obj.getString("autor_id"),
-                autorNombre = obj.getString("autor_nombre"),
-                titulo = obj.getString("titulo"),
-                descripcion = obj.getString("descripcion"),
-                categoria = runCatching { Categoria.valueOf(obj.getString("categoria")) }.getOrDefault(Categoria.AVISO),
-                facultad = Facultad.fromDisplayName(obj.getString("facultad")) ?: Facultad.CIENCIAS_VIDA_TECNOLOGIAS,
-                alcance = runCatching { Alcance.valueOf(obj.getString("alcance")) }.getOrDefault(Alcance.GENERAL),
-                carrera = if (obj.has("carrera") && !obj.isNull("carrera")) obj.getString("carrera") else null,
-                fecha = parseTimestamp(if (obj.has("fecha") && !obj.isNull("fecha")) obj.getString("fecha") else null),
-                imageUrl = if (obj.has("image_url") && !obj.isNull("image_url")) obj.getString("image_url") else null,
-                allowedReactionIds = obj.reactionIds(),
-                videoUrl = if (obj.isNull("video_url")) null else obj.getString("video_url"),
-                additionalImageUrls = obj.additionalImages()
-            )
+            obj.toPost()
         }.recoverCatching {
             if (BuildConfig.UDICE_SUPABASE) throw it
             fallback.getPostById(id).getOrNull()
@@ -177,7 +218,6 @@ class SupabaseRemoteDataSource @Inject constructor(
             put("categoria", post.categoria.name)
             put("facultad", post.facultad.displayName)
             put("alcance", post.alcance.name)
-            if (post.imageUrl != null) put("image_url", post.imageUrl)
         }
         val result = if (BuildConfig.UDICE_SUPABASE) {
             val allowed = post.allowedReactionIds?.map { it.removePrefix("LOCAL_") }
@@ -191,6 +231,19 @@ class SupabaseRemoteDataSource @Inject constructor(
             if (BuildConfig.UDICE_SUPABASE) throw it
             fallback.updatePost(post).getOrThrow()
         }
+    }
+
+    override suspend fun updatePostMedia(post: Post): Result<Post> {
+        val allowed = post.allowedReactionIds?.map { it.removePrefix("LOCAL_") }
+        val body = JSONObject()
+            .put("titulo", post.titulo)
+            .put("descripcion", post.descripcion)
+            .put("categoria", post.categoria.name)
+            .put("reacciones_permitidas", allowed?.let { JSONArray(it) } ?: JSONObject.NULL)
+            .put("image_url", post.imageUrl ?: JSONObject.NULL)
+            .put("additional_image_urls", JSONArray(post.additionalImageUrls))
+            .put("video_url", post.videoUrl ?: JSONObject.NULL)
+        return cloudPosts("PATCH", "id=eq.${post.id}", body).map { post }
     }
 
     override suspend fun deletePost(id: String): Result<Unit> {

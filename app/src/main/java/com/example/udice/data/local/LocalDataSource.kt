@@ -9,6 +9,7 @@ interface LocalDataSource {
     fun observePostById(id: String): Flow<Post?>
     suspend fun getPostById(id: String): Post?
     suspend fun insertPost(post: Post)
+    suspend fun insertPosts(posts: List<Post>)
     suspend fun replacePosts(posts: List<Post>)
     suspend fun updatePost(post: Post)
     suspend fun deletePostById(id: String)
