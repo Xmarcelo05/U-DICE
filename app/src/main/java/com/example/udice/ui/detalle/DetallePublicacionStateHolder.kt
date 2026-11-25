@@ -49,6 +49,16 @@ class DetallePublicacionStateHolder @Inject constructor(
 
     private val isUpdatingSave = MutableStateFlow(false)
     private val actionError = MutableStateFlow<String?>(null)
+    private val fetching = MutableStateFlow(postId.isNotBlank())
+
+    init {
+        if (postId.isNotBlank()) viewModelScope.launch {
+            actionError.value = postRepository.loadPostIfMissing(postId).exceptionOrNull()?.let {
+                "No se pudo cargar el aviso."
+            }
+            fetching.value = false
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val isSavedFlow = sessionRepository.currentUser.flatMapLatest { user ->
@@ -69,10 +79,15 @@ class DetallePublicacionStateHolder @Inject constructor(
         postFlow,
         isSavedFlow,
         isUpdatingSave,
-        actionError
-    ) { post, isSaved, updating, error ->
+        actionError,
+        fetching
+    ) { post, isSaved, updating, error, loading ->
         if (post == null) {
-            DetallePublicacionUiState.NotFound
+            when {
+                loading -> DetallePublicacionUiState.Loading
+                error != null -> DetallePublicacionUiState.Error(error)
+                else -> DetallePublicacionUiState.NotFound
+            }
         } else {
             DetallePublicacionUiState.Content(
                 post = post,

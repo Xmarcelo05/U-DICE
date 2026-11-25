@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.udice.data.model.Post
 import com.example.udice.data.model.Rol
 import com.example.udice.data.repository.PostRepository
+import com.example.udice.data.repository.PostMediaEdit
 import com.example.udice.data.repository.ReactionsRepository
 import com.example.udice.data.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,20 +35,27 @@ class MisPublicacionesStateHolder @Inject constructor(
     private val _operation = MutableStateFlow(PostOperation())
     val operation = _operation.asStateFlow()
 
-    fun edit(post: Post) = perform {
+    fun edit(post: Post, media: PostMediaEdit?, onSaved: () -> Unit) = perform(onSaved) {
         require(post.titulo.isNotBlank() && post.descripcion.isNotBlank()) { "Completa el título y la descripción." }
-        posts.updatePost(post.copy(titulo = post.titulo.trim(), descripcion = post.descripcion.trim())).getOrThrow()
+        val changes = post.copy(titulo = post.titulo.trim(), descripcion = post.descripcion.trim())
+        val result = if (media == null) posts.updatePost(changes) else posts.updateMedia(changes, media)
+        result.getOrThrow()
+    }
+
+    fun clearError() {
+        if (!_operation.value.running) _operation.value = PostOperation()
     }
 
     fun delete(id: String) = perform { posts.deletePost(id).getOrThrow() }
 
-    private fun perform(action: suspend () -> Unit) {
+    private fun perform(onSaved: () -> Unit = {}, action: suspend () -> Unit) {
         if (_operation.value.running) return
         _operation.value = PostOperation(running = true)
         viewModelScope.launch {
             try {
                 action()
                 _operation.value = PostOperation()
+                onSaved()
             } catch (e: CancellationException) {
                 _operation.value = PostOperation()
                 throw e

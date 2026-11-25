@@ -23,6 +23,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,6 +34,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -69,7 +77,9 @@ fun PostCard(
     onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
     onPostClick: () -> Unit = {},
-    reactionTypes: List<TipoReaccion> = TipoReaccion.defaults
+    reactionTypes: List<TipoReaccion> = TipoReaccion.defaults,
+    onEditClick: (() -> Unit)? = null,
+    onDeleteClick: (() -> Unit)? = null
 ) {
     val categoryColor = when (post.categoria) {
         Categoria.EVENTO -> ColorEvento
@@ -155,6 +165,24 @@ fun PostCard(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
+                }
+                if (onEditClick != null && onDeleteClick != null) {
+                    var expanded by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones de publicación", tint = AzulPrincipal)
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenuItem(text = { Text("Editar") }, onClick = {
+                                expanded = false
+                                onEditClick()
+                            })
+                            DropdownMenuItem(text = { Text("Eliminar") }, onClick = {
+                                expanded = false
+                                onDeleteClick()
+                            })
+                        }
+                    }
                 }
             }
 

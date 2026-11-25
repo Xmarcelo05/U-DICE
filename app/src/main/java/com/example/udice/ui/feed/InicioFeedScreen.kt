@@ -22,18 +22,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,6 +64,10 @@ import com.example.udice.ui.theme.GrisPizarra
 @Composable
 fun InicioFeedRoute(
     onNavigateToPostDetail: (String) -> Unit = {},
+    editableAuthorId: String? = null,
+    onEditPost: (String) -> Unit = {},
+    scrollRequested: Boolean = false,
+    onScrollHandled: () -> Unit = {},
     stateHolder: InicioFeedStateHolder = hiltViewModel()
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
@@ -87,8 +97,14 @@ fun InicioFeedRoute(
                 onSaveClick = { postId ->
                     stateHolder.onEvent(InicioFeedEvent.ToggleSave(postId))
                 },
+                onPostClick = onNavigateToPostDetail,
+                editableAuthorId = editableAuthorId,
+                onEditPost = onEditPost,
+                scrollRequested = scrollRequested,
+                onScrollHandled = onScrollHandled,
                 onRefresh = { stateHolder.onEvent(InicioFeedEvent.Refresh) },
-                onPostClick = onNavigateToPostDetail
+                onDeletePost = { stateHolder.onEvent(InicioFeedEvent.DeletePost(it)) },
+                onLoadMore = { stateHolder.onEvent(InicioFeedEvent.LoadMore) }
             )
         }
         InicioFeedUiState.Loading -> {
@@ -115,6 +131,7 @@ fun InicioFeedRoute(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InicioFeedScreen(
     state: InicioFeedUiState.Content,
@@ -122,9 +139,46 @@ fun InicioFeedScreen(
     onReactionClick: (String, TipoReaccion) -> Unit,
     onSaveClick: (String) -> Unit,
     onPostClick: (String) -> Unit = {},
+    editableAuthorId: String? = null,
+    onEditPost: (String) -> Unit = {},
+    onDeletePost: (String) -> Unit = {},
+    onLoadMore: () -> Unit = {},
+    scrollRequested: Boolean = false,
+    onScrollHandled: () -> Unit = {},
     onRefresh: () -> Unit = {}
 ) {
+    var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
+    state.posts.firstOrNull { it.post.id == deletingId && it.post.autorId == editableAuthorId }?.let { item ->
+        AlertDialog(
+            onDismissRequest = { deletingId = null },
+            title = { Text("Eliminar publicación") },
+            text = { Text("¿Eliminar «${item.post.titulo}» del feed?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deletingId = null
+                    onDeletePost(item.post.id)
+                }) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingId = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
     val listState = rememberLazyListState()
+    LaunchedEffect(scrollRequested) {
+        if (scrollRequested) {
+            listState.scrollToItem(0)
+            onScrollHandled()
+        }
+    }
+    LaunchedEffect(state.posts.size, state.hasMore, state.loadingMore, state.pageFailed, state.isRefreshing) {
+        if (state.posts.isNotEmpty() && state.hasMore && !state.loadingMore && !state.pageFailed && !state.isRefreshing) {
+            snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index >= state.posts.lastIndex } }
+                .filter { it }.first()
+            onLoadMore()
+        }
+    }
     var lastAppliedRefresh by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(state.refreshVersion) {
         if (state.refreshVersion > lastAppliedRefresh) {
@@ -153,13 +207,6 @@ fun InicioFeedScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onRefresh, enabled = !state.isRefreshing) {
-                    if (state.isRefreshing) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar novedades", tint = AzulPrincipal)
-                    }
-                }
                 state.categories.forEach { category ->
                     val isSelected = category == state.selectedCategory
                     FilterChip(
@@ -192,40 +239,46 @@ fun InicioFeedScreen(
                 Text(message, Modifier.padding(horizontal = 16.dp), color = androidx.compose.material3.MaterialTheme.colorScheme.error)
             }
 
-            // Lista de publicaciones en el feed (RF 6: orden cronológico y preferencias)
-            if (state.posts.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = GrisPizarra,
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "No hay avisos para los filtros seleccionados o tus facultades de interés.",
-                            fontSize = 14.sp,
-                            color = GrisPizarra,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            } else {
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize()
+            ) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    if (state.posts.isEmpty()) item {
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = GrisPizarra,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = if (state.hasMore) "No hay coincidencias en los avisos cargados."
+                                        else "No hay avisos para los filtros seleccionados o tus facultades de interés.",
+                                    fontSize = 14.sp,
+                                    color = GrisPizarra,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (state.hasMore) FeedPageFooter(state, onLoadMore)
+                            }
+                        }
+                    }
                     items(state.posts, key = { it.post.id }) { item ->
                         PostCard(
                             post = item.post,
@@ -234,15 +287,32 @@ fun InicioFeedScreen(
                             reactionTypes = state.reactionTypes,
                             onReactionClick = { tipo -> onReactionClick(item.post.id, tipo) },
                             onSaveClick = { onSaveClick(item.post.id) },
-                            onPostClick = { onPostClick(item.post.id) }
+                            onPostClick = { onPostClick(item.post.id) },
+                            onEditClick = if (item.post.autorId == editableAuthorId) {
+                                { onEditPost(item.post.id) }
+                            } else null,
+                            onDeleteClick = if (item.post.autorId == editableAuthorId) {
+                                { deletingId = item.post.id }
+                            } else null
                         )
                     }
 
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
+                    if (state.posts.isNotEmpty()) item {
+                        FeedPageFooter(state, onLoadMore)
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FeedPageFooter(state: InicioFeedUiState.Content, onLoadMore: () -> Unit) {
+    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+        when {
+            state.loadingMore -> CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+            state.pageFailed -> TextButton(onClick = onLoadMore) { Text("Reintentar carga") }
+            state.hasMore -> TextButton(onClick = onLoadMore, enabled = !state.isRefreshing) { Text("Cargar más") }
         }
     }
 }

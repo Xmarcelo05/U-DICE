@@ -29,6 +29,7 @@ import com.example.udice.ui.admin.AdminRoute
 import com.example.udice.ui.auth.AuthScreen
 import com.example.udice.ui.auth.AuthStateHolder
 import com.example.udice.ui.auth.SessionState
+import com.example.udice.ui.busqueda.BusquedaRoute
 import com.example.udice.ui.components.UDiceBottomBar
 import com.example.udice.ui.components.UDiceHeader
 import com.example.udice.ui.detalle.DetallePublicacionRoute
@@ -59,6 +60,8 @@ fun UDiceApp(auth: AuthStateHolder) {
     }
 }
 
+private const val FEED_SCROLL_REQUEST = "feedScrollRequest"
+
 @Composable
 private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLogout: () -> Unit) {
     val navController = rememberNavController()
@@ -77,10 +80,11 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
     val currentRoute = route ?: startRoute
     val title = when {
         currentRoute == NavRoutes.ADMIN -> "Administración"
+        currentRoute == NavRoutes.BUSQUEDA -> "Buscar publicaciones"
         currentRoute == NavRoutes.PREFERENCIAS -> "Preferencias"
         currentRoute == NavRoutes.NUEVA_PUBLICACION -> "Nueva publicación"
         currentRoute == NavRoutes.PERFIL -> "Mi perfil"
-        currentRoute == NavRoutes.MIS_PUBLICACIONES -> "Mis publicaciones"
+        currentRoute == NavRoutes.MIS_PUBLICACIONES || currentRoute == NavRoutes.EDITAR_PUBLICACION -> "Mis publicaciones"
         currentRoute == NavRoutes.GUARDADOS -> "Publicaciones guardadas"
         currentRoute.startsWith("detalle_publicacion/") -> "Detalle del aviso"
         else -> "U-DICE · Novedades"
@@ -100,11 +104,20 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
     Scaffold(
         topBar = { UDiceHeader(title, role, onLogout, logoutEnabled) },
         bottomBar = {
-            if (!isAdmin) UDiceBottomBar(currentRoute, role) { destination ->
-                navController.navigate(destination) {
-                    popUpTo(NavRoutes.INICIO_FEED) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
+            if (!isAdmin) {
+                fun navigateToTab(destination: String) {
+                    navController.navigate(destination) {
+                        popUpTo(NavRoutes.INICIO_FEED) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+                UDiceBottomBar(currentRoute, role) { destination ->
+                    if (currentRoute == NavRoutes.INICIO_FEED && destination == NavRoutes.INICIO_FEED) {
+                        navController.getBackStackEntry(NavRoutes.INICIO_FEED).savedStateHandle[FEED_SCROLL_REQUEST] = true
+                    } else {
+                        navigateToTab(destination)
+                    }
                 }
             }
         },
@@ -118,9 +131,18 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
             if (isAdmin) {
                 composable(NavRoutes.ADMIN) { AdminRoute() }
             } else {
-                composable(NavRoutes.INICIO_FEED) {
-                    InicioFeedRoute(onNavigateToPostDetail = goToDetail)
+                composable(NavRoutes.INICIO_FEED) { entry ->
+                    val scrollRequested by entry.savedStateHandle
+                        .getStateFlow(FEED_SCROLL_REQUEST, false).collectAsStateWithLifecycle()
+                    InicioFeedRoute(
+                        scrollRequested = scrollRequested,
+                        onScrollHandled = { entry.savedStateHandle[FEED_SCROLL_REQUEST] = false },
+                        onNavigateToPostDetail = goToDetail,
+                        editableAuthorId = user.id.takeIf { user.rol == Rol.ASO },
+                        onEditPost = { navController.navigate(NavRoutes.editarPublicacion(it)) { launchSingleTop = true } }
+                    )
                 }
+                composable(NavRoutes.BUSQUEDA) { BusquedaRoute(onPostClick = goToDetail) }
                 composable(NavRoutes.PREFERENCIAS) {
                     PreferenciasRoute(onGuardarExitoso = goToFeed, onCancelar = goToFeed)
                 }
@@ -142,6 +164,16 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
                 }
                 composable(NavRoutes.MIS_PUBLICACIONES) {
                     if (user.rol == Rol.ASO) MisPublicacionesRoute(onPostClick = goToDetail)
+                }
+                composable(
+                    NavRoutes.EDITAR_PUBLICACION,
+                    arguments = listOf(navArgument(NavRoutes.POST_ID_ARG) { type = NavType.StringType })
+                ) { entry ->
+                    if (user.rol == Rol.ASO) MisPublicacionesRoute(
+                        onPostClick = goToDetail,
+                        initialEditId = entry.arguments?.getString(NavRoutes.POST_ID_ARG),
+                        onEditorClosed = { navController.popBackStack() }
+                    )
                 }
                 composable(NavRoutes.GUARDADOS) {
                     GuardadosRoute(

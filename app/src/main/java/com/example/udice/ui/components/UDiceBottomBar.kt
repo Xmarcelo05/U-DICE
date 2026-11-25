@@ -3,10 +3,10 @@ package com.example.udice.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -51,52 +52,41 @@ fun UDiceBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(vertical = 8.dp, horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Tab 1: Inicio / Feed (RF 6)
-            BottomNavItem(
-                label = "Inicio",
-                icon = Icons.Default.Home,
-                isSelected = currentRoute == NavRoutes.INICIO_FEED,
-                onClick = { onNavigate(NavRoutes.INICIO_FEED) }
-            )
-
-            // Tab 2: Preferencias (RF 3)
-            BottomNavItem(
-                label = "Preferencias",
-                icon = Icons.Default.Tune,
-                isSelected = currentRoute == NavRoutes.PREFERENCIAS,
-                onClick = { onNavigate(NavRoutes.PREFERENCIAS) }
-            )
-
-            // Tab Central: Nueva Publicación (Solo si el rol es PUBLICADOR)
+            BottomNavItem("Inicio", Icons.Default.Home, currentRoute == NavRoutes.INICIO_FEED, Modifier.weight(1f)) {
+                onNavigate(NavRoutes.INICIO_FEED)
+            }
+            BottomNavItem("Buscar", Icons.Default.Search, currentRoute == NavRoutes.BUSQUEDA, Modifier.weight(1f)) {
+                onNavigate(NavRoutes.BUSQUEDA)
+            }
             if (currentRole == UserRole.PUBLICADOR) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(AzulPrincipal)
-                        .clickable { onNavigate(NavRoutes.NUEVA_PUBLICACION) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Nueva Publicación",
-                        tint = Blanco,
-                        modifier = Modifier.size(28.dp)
-                    )
+                Box(Modifier.weight(1f).height(60.dp), contentAlignment = Alignment.TopCenter) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(AzulPrincipal)
+                            .clickable { onNavigate(NavRoutes.NUEVA_PUBLICACION) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Nueva publicación",
+                            tint = Blanco,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
-
-            // Tab 3: Perfil
-            BottomNavItem(
-                label = "Perfil",
-                icon = Icons.Default.Person,
-                isSelected = currentRoute == NavRoutes.PERFIL,
-                onClick = { onNavigate(NavRoutes.PERFIL) }
-            )
+            BottomNavItem("Preferencias", Icons.Default.Tune, currentRoute == NavRoutes.PREFERENCIAS, Modifier.weight(1f)) {
+                onNavigate(NavRoutes.PREFERENCIAS)
+            }
+            BottomNavItem("Perfil", Icons.Default.Person, currentRoute == NavRoutes.PERFIL, Modifier.weight(1f)) {
+                onNavigate(NavRoutes.PERFIL)
+            }
         }
     }
 }
@@ -106,12 +96,14 @@ private fun BottomNavItem(
     label: String,
     icon: ImageVector,
     isSelected: Boolean,
+    modifier: Modifier,
     onClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
+            .height(60.dp)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(top = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -123,18 +115,10 @@ private fun BottomNavItem(
         Text(
             text = label,
             fontSize = 11.sp,
+            maxLines = 1,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) AzulPrincipal else GrisPizarra,
             modifier = Modifier.padding(top = 2.dp)
         )
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 2.dp)
-                    .size(4.dp)
-                    .clip(CircleShape)
-                    .background(AzulPrincipal)
-            )
-        }
     }
 }
