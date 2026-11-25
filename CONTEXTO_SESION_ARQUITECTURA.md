@@ -8,7 +8,9 @@ La rama `4taEtapa` reúne la implementación final en Kotlin, Jetpack Compose, R
 - `41d13cc`: sincronización de avisos entre Supabase y Room.
 - `c21b494`: Main-Safety, autenticación por correo, RLS de tablas heredadas, imágenes, refresco del feed y emojis por aviso.
 - `9503704`: soporte para videos MP4 y documentación de arquitectura.
-- Al 24 de noviembre de 2026, la última referencia remota disponible apunta a `9503704`. La configuración de Supabase mediante `local.properties` y esta actualización del contexto están pendientes de commit.
+- `755476e`: galería y configuración local de Supabase.
+- `f34f2f2`: diagrama detallado del README.
+- Cambios del 25 de noviembre: búsqueda remota y por fechas, edición multimedia, acciones del autor en el feed, paginación y gestos de navegación.
 
 ## Puesta en marcha
 
@@ -19,12 +21,12 @@ En Windows, ejecuta `.\gradlew assembleDebug`. La variante de desarrollo sin con
 ## Interfaz y estado
 
 - `MainActivity` comparte `AuthStateHolder` con `UDiceApp`, que elige la interfaz pública o el grafo autenticado. El registro muestra un aviso de correo y Supabase redirige a `com.example.udice://confirm-email`. El enlace confirma el correo y la sesión se abre con la contraseña.
-- Cada ruta obtiene su ViewModel con Hilt y consume el estado con `collectAsStateWithLifecycle`. El feed combina flujos de avisos, votos, preferencias y guardados. La actualización manual o tras 60 segundos en segundo plano vuelve al inicio cuando la sincronización de avisos termina bien.
-- Nueva publicación permite seleccionar y quitar hasta cuatro imágenes o un MP4. Muestra una vista previa cuadrada de las imágenes y el progreso de subida del video. Mis publicaciones permite editar los campos del aviso, elegir los emojis para los lectores y eliminar el aviso. Feed y Detalle cargan las imágenes mediante Coil.
+- Cada ruta obtiene su ViewModel con Hilt y consume el estado con `collectAsStateWithLifecycle`. El feed combina flujos de avisos, votos, preferencias y guardados. El gesto de tirar desde arriba actualiza el feed. Tocar Inicio cuando ya está abierto solo desplaza la lista al primer aviso. Volver tras al menos 60 segundos en segundo plano también actualiza el feed.
+- Nueva publicación permite seleccionar y quitar hasta cuatro imágenes o un MP4. Muestra una vista previa cuadrada de las imágenes y el progreso de subida del video. Mis publicaciones permite buscar avisos propios y editar texto, emojis y archivos en las pestañas Publicación y Multimedia. El menú de los avisos propios en el feed abre ese editor o pide confirmación para eliminar. Feed y Detalle cargan las imágenes mediante Coil.
 
 ## Persistencia y concurrencia
 
-- `PostRepositoryImpl` serializa cambios y refrescos con un `Mutex`. En modo Supabase escribe en PostgREST y actualiza Room después de la respuesta. Las descargas se paginan y reemplazan la caché en una transacción solo si terminan correctamente.
+- `PostRepositoryImpl` serializa cambios y refrescos con un `Mutex`. En modo Supabase escribe en PostgREST y actualiza Room después de la respuesta. El feed pide hasta 50 avisos por página mediante un cursor por fecha e ID. Cada página inserta o actualiza en Room, y el feed observa únicamente su ventana cargada. Buscar espera 400 ms, consulta la RPC por páginas de 20, reutiliza resultados durante un minuto y carga el detalle en Room si faltaba.
 - Room v7 guarda los avisos, la URL de video cuando aplica, sus emojis habilitados, votos y catálogo. Guardados y preferencias se guardan por cuenta y dispositivo. El modo local de desarrollo usa una base separada.
 - `@IoDispatcher` provee `Dispatchers.IO` a los repositorios, clientes HTTP y acceso a Room. Los repositorios propagan la cancelación de corrutinas. Compose consume `Flow` y `StateFlow`.
 - `CloudSessionRepository` maneja el inicio de sesión y la renovación de tokens. La función `udice-faculty-admin` administra las cuentas ASO tras verificar la identidad y el rol del solicitante.
@@ -37,12 +39,30 @@ En Windows, ejecuta `.\gradlew assembleDebug`. La variante de desarrollo sin con
 - `publicaciones-videos` admite MP4 hasta 20 MiB sin límite de duración, con el mismo modelo de acceso que las imágenes. Android valida el archivo y genera un JPEG para el feed. El detalle usa Media3 ExoPlayer y pausa al ir a segundo plano. El formulario admite hasta cuatro imágenes o un video por aviso.
 - Las migraciones SQL están en `supabase/migrations`. En el proyecto compartido se ejecutaron individualmente con Supabase CLI. Comprueba el esquema desplegado antes de intentar aplicar toda la serie a una base existente.
 
+### Historial del esquema desplegado
+
+| Migración | Cambios de esquema y permisos |
+| --- | --- |
+| [20261122000100](supabase/migrations/20261122000100_udice_auth_catalog.sql) | Perfiles enlazados a Supabase Auth, catálogo de reacciones, funciones de administración y aprovisionamiento de perfiles, y políticas RLS iniciales. |
+| [20261122000200](supabase/migrations/20261122000200_nombres_tablas_en_espanol.sql) | Renombra las tablas a `perfiles_udice` y `tipos_reaccion_udice` y actualiza las funciones que las consultan. |
+| [20261122000300](supabase/migrations/20261122000300_votos_y_roles_aso.sql) | Roles ASO, RLS de publicaciones y votos, y RPC `udice_guardar_reaccion`. Cada usuario conserva un voto por publicación. |
+| [20261124000100](supabase/migrations/20261124000100_restringir_tablas_heredadas.sql) | Activa RLS y retira permisos de cliente sobre las tablas heredadas que existan. |
+| [20261124000200](supabase/migrations/20261124000200_imagenes_publicaciones.sql) | Crea el bucket de imágenes y limita la subida a publicadores en su propia carpeta. |
+| [20261124000300](supabase/migrations/20261124000300_emojis_por_publicacion.sql) | Añade `publicaciones.reacciones_permitidas` y valida la selección del autor y los votos en la base. |
+| [20261124000400](supabase/migrations/20261124000400_videos_publicaciones.sql) | Añade `publicaciones.video_url`, crea el bucket MP4 y sus políticas. |
+| [20261124000500](supabase/migrations/20261124000500_galerias_publicaciones.sql) | Añade `publicaciones.additional_image_urls`. La restricción admite hasta tres fotos extra con una imagen principal y excluye video en esa combinación. |
+| [20261125000100](supabase/migrations/20261125000100_busqueda_publicaciones.sql) | Añade `udice_buscar_publicaciones`, una RPC autenticada que respeta RLS y devuelve hasta 20 resúmenes filtrados por texto, categoría, facultad y fechas. |
+
+El feed usa PostgREST con un cursor por fecha e ID. La paginación del feed y la edición de multimedia usan las columnas y políticas ya desplegadas.
+
 ## Verificación y datos de prueba
 
 - La compilación y las cuatro pruebas instrumentadas en Android pasaron tras integrar MP4. Tras mover la configuración a `local.properties` se repitieron la compilación y las pruebas unitarias. También se verificó la generación de `BuildConfig` y la exclusión de `local.properties` de Git.
 - En Supabase se comprobó que los roles de cliente carecen de permisos sobre las tablas heredadas. El autor puede elegir emojis para su aviso, otra cuenta ASO no puede alterarlos y el lector solo puede votar con los tipos habilitados.
 - Con la ASO de prueba se subió, descargó y eliminó una imagen temporal. También se subió un MP4 temporal, se verificó la lectura por rangos mediante HTTP 206, se guardó su URL en un aviso y se eliminaron ambos. Storage rechazó una carga con MIME `video/webm`.
 - El proyecto compartido contiene cuatro avisos marcados `[Prueba]` con imágenes externas, una cuenta ADMIN y una cuenta ASO de prueba. Se verificaron ambas sesiones y el acceso administrativo al listado de ASO. Las credenciales se guardan en un TXT fuera del repositorio.
+
+- Se verificó la RPC con dos páginas sin duplicados, texto sin tilde, filtros combinados y bloqueo de acceso anónimo. Se comprobó en el teléfono la carga progresiva del feed.
 
 ## Pendientes de entrega
 

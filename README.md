@@ -1,6 +1,6 @@
 # U-DICE
 
-Aplicación Android en Kotlin y Jetpack Compose para consultar y publicar avisos universitarios. Los lectores pueden filtrar el feed, reaccionar y guardar avisos. Las cuentas ASO pueden crear y editar sus avisos, adjuntar hasta cuatro imágenes o un video y elegir qué reacciones ofrecen. Los administradores gestionan las cuentas ASO y el catálogo de reacciones.
+Aplicación Android en Kotlin y Jetpack Compose para consultar y publicar avisos universitarios. Los lectores pueden filtrar el feed, buscar avisos por texto o fecha, reaccionar y guardar avisos. Las cuentas ASO pueden crear y editar sus avisos, adjuntar hasta cuatro imágenes o un video y elegir qué reacciones ofrecen. Los administradores gestionan las cuentas ASO y el catálogo de reacciones.
 
 ## Compilación
 
@@ -25,6 +25,7 @@ flowchart TD
 
         Nav -->|"ADMIN"| Admin["AdminRoute<br/>AdminStateHolder → AdminScreen"]
         Nav --> Feed["InicioFeedRoute<br/>InicioFeedStateHolder → InicioFeedScreen"]
+        Nav --> Search["BusquedaRoute<br/>Texto, categoría, facultad y fechas"]
         Nav --> Pref["PreferenciasRoute<br/>PreferenciasStateHolder → PreferenciasScreen"]
         Nav -->|"ASO"| New["NuevaPublicacionRoute<br/>NuevaPublicacionStateHolder → NuevaPublicacionScreen"]
         Nav --> Profile["PerfilScreen<br/>Cuenta activa, guardados y avisos propios"]
@@ -71,6 +72,7 @@ flowchart TD
     App --> Session
     Admin --> Session
     Admin --> Votes
+    Search --> Posts
     Feed --> Posts
     Feed --> PrefRepo
     Feed --> SavedRepo
@@ -86,7 +88,7 @@ flowchart TD
     subgraph CLOUD["Supabase"]
         AuthAPI["Auth<br/>Registro, confirmación y tokens"]
         REST["PostgREST<br/>Publicaciones, perfiles y catálogo"]
-        RPC["RPC udice_guardar_reaccion<br/>Valida identidad y emojis habilitados por aviso"]
+        RPC["RPC de votos y búsqueda<br/>Emojis por aviso y hasta 20 resultados por página"]
         Edge["Edge Function udice-faculty-admin<br/>Gestión de cuentas ASO"]
         Storage["Storage<br/>publicaciones-imagenes y publicaciones-videos"]
         Policies["RLS y permisos de base de datos<br/>Lectura autenticada y escrituras por autor"]
@@ -116,12 +118,14 @@ flowchart TD
     Config -. "Configuración de Supabase" .-> HTTP
 ```
 
-- **Avisos.** Supabase recibe los cambios y Room expone el estado reactivo a la interfaz. Una sincronización exitosa actualiza la caché completa. Ante un fallo de red se conserva la última copia.
+- **Avisos.** Supabase recibe los cambios y Room expone el estado reactivo a la interfaz. El feed empieza con hasta 50 avisos y carga más al llegar al final. Cada página actualiza Room. Ante un fallo de red se conserva la última copia.
 - **Guardados y preferencias.** Se almacenan por cuenta en Room y permanecen en el dispositivo.
 - **Registro.** Supabase solicita verificar el correo. El enlace abre U-DICE y el usuario puede iniciar sesión con su contraseña.
-- **Feed.** Vuelve al inicio al actualizarse y sincroniza al volver después de al menos 60 segundos con el feed en segundo plano.
+- **Feed.** Toca Inicio para volver arriba. Tira de la lista desde el borde superior para actualizarla. También se sincroniza al volver tras al menos 60 segundos en segundo plano.
+- **Búsqueda.** Supabase devuelve resúmenes de 20 en 20. Los filtros combinan categoría, facultad y fechas. Si el aviso no está en Room, se descarga al abrir su detalle.
+- **Edición.** Los autores pueden editar texto, emojis y archivos desde un mismo diálogo. En sus tarjetas del feed, el menú permite editar o eliminar.
 - **Imágenes.** Se seleccionan hasta cuatro por aviso y se agrupan en un bloque cuadrado en el formulario, el feed y el detalle. El bucket admite JPG, PNG y WebP de hasta 5 MiB. La lectura por URL es pública y las operaciones de escritura están protegidas por RLS.
 - **Videos.** MP4 opcional de hasta 20 MiB por aviso, sin límite de duración. La app genera una miniatura y reproduce el video bajo demanda en el detalle con Media3 ExoPlayer.
 - **Reacciones.** Los autores eligen de un catálogo compartido desde Mis publicaciones. Supabase valida la selección al guardar cada voto.
 
-Consulta [el contexto de arquitectura](CONTEXTO_SESION_ARQUITECTURA.md) para detalles de implementación y despliegue.
+Consulta [el contexto de arquitectura](CONTEXTO_SESION_ARQUITECTURA.md#historial-del-esquema-desplegado) para ver las migraciones, funciones y políticas de Supabase.
