@@ -40,6 +40,7 @@ import com.example.udice.ui.navigation.NavRoutes
 import com.example.udice.ui.navigation.UserRole
 import com.example.udice.ui.nuevapublicacion.NuevaPublicacionRoute
 import com.example.udice.ui.perfil.PerfilScreen
+import com.example.udice.ui.perfilpublico.PublisherRoute
 import com.example.udice.ui.preferencias.PreferenciasRoute
 import com.example.udice.ui.theme.UDICETheme
 
@@ -83,6 +84,7 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
         currentRoute == NavRoutes.BUSQUEDA -> "Buscar publicaciones"
         currentRoute == NavRoutes.PREFERENCIAS -> "Preferencias"
         currentRoute == NavRoutes.NUEVA_PUBLICACION -> "Nueva publicación"
+        currentRoute == NavRoutes.PERFIL_PUBLICADOR -> "Perfil del publicador"
         currentRoute == NavRoutes.PERFIL -> "Mi perfil"
         currentRoute == NavRoutes.MIS_PUBLICACIONES || currentRoute == NavRoutes.EDITAR_PUBLICACION -> "Mis publicaciones"
         currentRoute == NavRoutes.GUARDADOS -> "Publicaciones guardadas"
@@ -99,6 +101,10 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
         navController.navigate(NavRoutes.detallePublicacion(postId)) {
             launchSingleTop = true
         }
+    }
+
+    val goToPublisher: (String) -> Unit = { id ->
+        navController.navigate(NavRoutes.perfilPublicador(id)) { launchSingleTop = true }
     }
 
     Scaffold(
@@ -138,12 +144,19 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
                         scrollRequested = scrollRequested,
                         onScrollHandled = { entry.savedStateHandle[FEED_SCROLL_REQUEST] = false },
                         onNavigateToPostDetail = goToDetail,
+                        onPublisherClick = goToPublisher,
                         editableAuthorId = user.id.takeIf { user.rol == Rol.ASO },
                         ownAvatarUrl = user.avatarUrl,
                         onEditPost = { navController.navigate(NavRoutes.editarPublicacion(it)) { launchSingleTop = true } }
                     )
                 }
-                composable(NavRoutes.BUSQUEDA) { BusquedaRoute(onPostClick = goToDetail) }
+                composable(NavRoutes.BUSQUEDA) { BusquedaRoute(onPostClick = goToDetail, onPublisher = goToPublisher) }
+                composable(
+                    NavRoutes.PERFIL_PUBLICADOR,
+                    arguments = listOf(navArgument(NavRoutes.PUBLISHER_ID_ARG) { type = NavType.StringType })
+                ) {
+                    PublisherRoute(onBack = { navController.popBackStack() }, onPost = goToDetail)
+                }
                 composable(NavRoutes.PREFERENCIAS) {
                     PreferenciasRoute(onGuardarExitoso = goToFeed, onCancelar = goToFeed)
                 }

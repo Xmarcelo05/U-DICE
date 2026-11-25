@@ -83,7 +83,8 @@ fun PostCard(
     onEditClick: (() -> Unit)? = null,
     onDeleteClick: (() -> Unit)? = null,
     authorAvatarUrl: String? = post.authorAvatarUrl,
-    videoContent: (@Composable () -> Unit)? = null
+    videoContent: (@Composable () -> Unit)? = null,
+    onPublisherClick: (() -> Unit)? = null
 ) {
     val categoryColor = when (post.categoria) {
         Categoria.EVENTO -> ColorEvento
@@ -124,7 +125,8 @@ fun PostCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(AzulInstitucional),
+                        .background(AzulInstitucional)
+                        .then(if (onPublisherClick != null) Modifier.clickable(onClickLabel = "Ver perfil", onClick = onPublisherClick) else Modifier),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -148,6 +150,7 @@ fun PostCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = if (onEditClick != null) "Yo" else post.autorNombre.ifEmpty { post.facultad.displayName },
+                        modifier = if (onPublisherClick != null) Modifier.clickable(onClickLabel = "Ver perfil", onClick = onPublisherClick) else Modifier,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,

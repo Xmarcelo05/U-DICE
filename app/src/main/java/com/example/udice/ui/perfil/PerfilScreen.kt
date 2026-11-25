@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -67,6 +68,10 @@ fun PerfilScreen(
 ) {
     val scrollState = rememberScrollState()
     val photoState by stateHolder.photoState.collectAsStateWithLifecycle()
+    val totals by stateHolder.followTotals.collectAsStateWithLifecycle()
+    val connections by stateHolder.connectionList.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { stateHolder.refreshTotals() }
+    connections?.let { ConnectionListSheet(it, stateHolder::closeConnections, stateHolder::loadConnections) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { photo: Uri? ->
         if (photo != null) stateHolder.updatePhoto(photo)
     }
@@ -144,6 +149,17 @@ fun PerfilScreen(
                 )
 
                 user.carrera?.let { Text(it, color = GrisPizarra) }
+                if (BuildConfig.UDICE_SUPABASE) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        TextButton(onClick = { stateHolder.openConnections(false) }) {
+                            Text("${totals?.following ?: "—"} siguiendo")
+                        }
+                        TextButton(onClick = { stateHolder.openConnections(true) }) {
+                            val followers = totals?.followers
+                            Text("${followers ?: "—"} ${if (followers == 1L) "seguidor" else "seguidores"}")
+                        }
+                    }
+                }
             }
         }
 

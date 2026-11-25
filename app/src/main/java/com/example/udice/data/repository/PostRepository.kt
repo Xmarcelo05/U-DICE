@@ -22,7 +22,7 @@ interface PostRepository {
     suspend fun searchPosts(search: PostSearch, after: FeedCursor?): Result<PostSearchPage>
     suspend fun loadPostIfMissing(id: String): Result<Unit>
     suspend fun syncPosts(): Result<Unit>
-    suspend fun loadFeedPage(after: FeedCursor?): Result<PostPage>
+    suspend fun loadFeedPage(after: FeedCursor?, following: Boolean = false): Result<PostPage>
     suspend fun createPost(
         post: Post,
         photos: List<Uri> = emptyList(),

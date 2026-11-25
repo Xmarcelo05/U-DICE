@@ -132,12 +132,18 @@ class SupabaseRemoteDataSource @Inject constructor(
         PostSearchPage(results, next)
     }
 
-    override suspend fun getFeedPage(after: FeedCursor?): Result<PostPage> {
+    override suspend fun getFeedPage(after: FeedCursor?, following: Boolean): Result<PostPage> {
         val boundary = after?.let {
             val date = Uri.encode(it.date)
             "&or=(fecha.lt.$date,and(fecha.eq.$date,id.lt.${it.id}))"
         }.orEmpty()
-        return cloudPosts("GET", "select=*,udice_avatar_autor&order=fecha.desc,id.desc&limit=$FEED_PAGE_SIZE$boundary")
+        val query = "select=*,udice_avatar_autor&order=fecha.desc,id.desc&limit=$FEED_PAGE_SIZE$boundary"
+        val response = if (following) dataResult {
+            session.signedRequest { token ->
+                cloud.request("rest/v1/rpc/udice_feed_siguiendo?$query", token = token)
+            }
+        } else cloudPosts("GET", query)
+        return response
             .mapCatching { response ->
                 val rows = JSONArray(response)
                 val posts = List(rows.length()) { rows.getJSONObject(it).toPost() }

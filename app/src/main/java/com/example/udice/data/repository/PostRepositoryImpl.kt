@@ -87,10 +87,10 @@ class PostRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun loadFeedPage(after: FeedCursor?): Result<PostPage> = withContext(ioDispatcher) {
+    override suspend fun loadFeedPage(after: FeedCursor?, following: Boolean): Result<PostPage> = withContext(ioDispatcher) {
         updateCache {
-            if (!usesCloud) return@updateCache PostPage(localDataSource.observePosts().first(), null)
-            val page = remoteDataSource.getFeedPage(after).getOrThrow()
+            if (!usesCloud) return@updateCache PostPage(if (following) emptyList() else localDataSource.observePosts().first(), null)
+            val page = remoteDataSource.getFeedPage(after, following).getOrThrow()
             localDataSource.insertPosts(page.posts)
             page
         }

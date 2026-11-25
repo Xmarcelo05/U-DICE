@@ -28,7 +28,7 @@ flowchart TD
         Nav --> Search["BusquedaRoute<br/>Texto, categoría, facultad y fechas"]
         Nav --> Pref["PreferenciasRoute<br/>PreferenciasStateHolder → PreferenciasScreen"]
         Nav -->|"ASO"| New["NuevaPublicacionRoute<br/>NuevaPublicacionStateHolder → NuevaPublicacionScreen"]
-        Nav --> Profile["PerfilScreen y PerfilStateHolder<br/>Foto, guardados y avisos propios"]
+        Nav --> Profile["PerfilScreen y PerfilStateHolder<br/>Foto, guardados, avisos y conexiones"]
         Profile --> Own["MisPublicacionesRoute<br/>MisPublicacionesStateHolder → MisPublicacionesScreen"]
         Profile --> Saved["GuardadosRoute<br/>GuardadosStateHolder → GuardadosScreen"]
         Feed --> Card["PostCard<br/>Foto del autor, reacciones y guardado"]
@@ -38,6 +38,10 @@ flowchart TD
 
         New --> Picker["Selector de Android<br/>Hasta cuatro fotos o un MP4"]
         New --> Gallery["Galería cuadrada y visor deslizable<br/>Coil y Compose HorizontalPager"]
+        Card --> PublicProfile["Perfil del publicador<br/>Seguir, total de seguidores y avisos paginados"]
+        Search --> PublicProfile
+        PublicProfile --> Detail
+        Profile --> Connections["Siguiendo y Seguidores<br/>Listas privadas paginadas"]
         Card --> Gallery
         Detail --> Gallery
         Detail --> Player["Media3 ExoPlayer<br/>Reproducción bajo demanda"]
@@ -63,6 +67,7 @@ flowchart TD
         PrefRepo -->|"Preferencias por cuenta"| Local
         SavedRepo -->|"Guardados por cuenta"| Local
         Local --> Room["Room · UDiceDatabase v8<br/>PostDao, UserDao, PreferenceDao,<br/>SavedPostDao y ReaccionDao"]
+        Publishers["PublisherRepository<br/>Perfiles y seguimientos"] --> HTTP
         Votes -->|"ReaccionDao: votos y catálogo"| Room
         Seed["SeedDataCallback<br/>Datos iniciales de desarrollo"] -. "Solo modo local" .-> Room
         CloudSession -->|"Foto de perfil"| Media
@@ -89,11 +94,14 @@ flowchart TD
     Detail --> SavedRepo
     Profile --> Session
     People --> Votes
+    Search --> Publishers
+    PublicProfile --> Publishers
+    Connections --> Publishers
 
     subgraph CLOUD["Supabase"]
         AuthAPI["Auth<br/>Registro, confirmación y tokens"]
         REST["PostgREST<br/>Publicaciones, perfiles y catálogo"]
-        RPC["RPC de votos, búsqueda y participantes<br/>Emojis por aviso y resultados paginados"]
+        RPC["RPC de votos, búsqueda, perfiles y seguimiento<br/>Emojis por aviso y resultados paginados"]
         Edge["Edge Function udice-faculty-admin<br/>Gestión de cuentas ASO"]
         Storage["Storage<br/>publicaciones-imagenes, publicaciones-videos y perfiles-imagenes"]
         Policies["RLS y permisos de base de datos<br/>Lectura autenticada y escrituras por autor"]
@@ -132,6 +140,7 @@ flowchart TD
 - **Imágenes.** Se seleccionan hasta cuatro por aviso y se agrupan en un bloque cuadrado en el formulario, el feed y el detalle. El bucket admite JPG, PNG y WebP de hasta 5 MiB. La lectura por URL es pública y las operaciones de escritura están protegidas por RLS.
 - **Videos.** MP4 opcional de hasta 20 MiB por aviso, sin límite de duración. Pulsa ▶ sobre la miniatura para reproducir en el feed o en el detalle con Media3 ExoPlayer. El video se detiene al salir de la pantalla.
 - **Reacciones.** Los autores eligen del catálogo qué emojis habilitar. El total abre un panel de participantes en el detalle con nombre, foto y filtro por emoji.
-- **Perfil.** Lectores y publicadores pueden cambiar su foto en Mi perfil. El feed usa la foto del autor y muestra sus iniciales cuando no hay foto.
+- **Siguiendo.** Busca publicadores en Personas o toca su foto en el feed. Desde su perfil puedes seguirlos y abrir sus avisos. La vista Siguiendo muestra sus publicaciones. El mensaje de lista vacía aparece después de que se confirme que no hay publicaciones para mostrar. El perfil público y las tarjetas de Personas incluyen el total de seguidores.
+- **Perfil.** Lectores y publicadores pueden cambiar su foto en Mi perfil. El feed usa la foto del autor y muestra sus iniciales cuando no hay foto. En Mi perfil, toca los contadores de Siguiendo o Seguidores para consultar tus listas.
 
 Consulta [el contexto de arquitectura](CONTEXTO_SESION_ARQUITECTURA.md#historial-del-esquema-desplegado) para ver las migraciones, funciones y políticas de Supabase.

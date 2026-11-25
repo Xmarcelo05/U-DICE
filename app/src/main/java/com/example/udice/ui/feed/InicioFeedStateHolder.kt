@@ -11,6 +11,9 @@ import com.example.udice.data.model.Post
 import com.example.udice.data.model.ReaccionSummary
 import com.example.udice.data.model.TipoReaccion
 import com.example.udice.data.repository.PostRepository
+import com.example.udice.data.repository.PublisherRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.drop
 import com.example.udice.data.repository.PreferencesRepository
 import com.example.udice.data.repository.ReactionsRepository
 import com.example.udice.data.repository.SavedPostsRepository
@@ -47,7 +50,9 @@ sealed interface InicioFeedUiState {
         val refreshVersion: Int = 0,
         val hasMore: Boolean = false,
         val loadingMore: Boolean = false,
-        val pageFailed: Boolean = false
+        val pageFailed: Boolean = false,
+        val following: Boolean = false,
+        val followingLoaded: Boolean = false
     ) : InicioFeedUiState
     data class Error(val message: String) : InicioFeedUiState
 }
@@ -59,6 +64,7 @@ sealed interface InicioFeedEvent {
     data class DeletePost(val postId: String) : InicioFeedEvent
     data object Refresh : InicioFeedEvent
     data object LoadMore : InicioFeedEvent
+    data class SelectFollowing(val value: Boolean) : InicioFeedEvent
 }
 
 val FEED_CATEGORIES = listOf("Todos", "Eventos", "Convocatorias", "Conferencias", "Avisos", "Otros")
@@ -71,7 +77,8 @@ class InicioFeedStateHolder @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
     private val sessionRepository: SessionRepository,
     private val reactionsRepository: ReactionsRepository,
-    private val savedPostsRepository: SavedPostsRepository
+    private val savedPostsRepository: SavedPostsRepository,
+    private val publishers: PublisherRepository
 ) : ViewModel() {
 
     private val selectedCategory = MutableStateFlow("Todos")
@@ -86,6 +93,7 @@ class InicioFeedStateHolder @Inject constructor(
 
     private data class FeedPages(
         val ids: Set<String>? = null,
+        val following: Boolean = false,
         val newest: Long = Long.MIN_VALUE,
         val cachedBeforeRefresh: Set<String> = emptySet(),
         val next: FeedCursor? = null,
@@ -96,10 +104,17 @@ class InicioFeedStateHolder @Inject constructor(
     private val pages = MutableStateFlow(FeedPages())
     private val isRefreshing = MutableStateFlow(false)
     private val refreshVersion = MutableStateFlow(0)
+    private var pageRequest: Job? = null
+    private var requestVersion = 0
     private var backgroundSince: Long? = null
 
     init {
         refreshFeed(resetScroll = false)
+        viewModelScope.launch {
+            publishers.followChanges.drop(1).collect {
+                if (pages.value.following) refreshFeed(force = true)
+            }
+        }
     }
 
     fun onBackground() {
@@ -114,27 +129,32 @@ class InicioFeedStateHolder @Inject constructor(
         }
     }
 
-    private fun refreshFeed(resetScroll: Boolean = true) {
-        if (isRefreshing.value || pages.value.loading) return
+    private fun refreshFeed(resetScroll: Boolean = true, force: Boolean = false) {
+        if (!force && (isRefreshing.value || pages.value.loading)) return
+        val following = pages.value.following
+        val version = ++requestVersion
+        pageRequest?.cancel()
+        if (force) pages.value = FeedPages(following = following)
         isRefreshing.value = true
-        viewModelScope.launch {
+        pageRequest = viewModelScope.launch {
             try {
                 sessionRepository.getCurrentUser() ?: return@launch
                 val cached = postRepository.posts.first()
-                val postsError = postRepository.loadFeedPage(null).onSuccess { page ->
+                val postsError = postRepository.loadFeedPage(null, following).onSuccess { page ->
                     pages.value = FeedPages(
                         ids = page.posts.map { it.id }.toSet(),
+                        following = following,
                         newest = page.posts.maxOfOrNull { it.fecha } ?: cached.maxOfOrNull { it.fecha } ?: Long.MIN_VALUE,
                         cachedBeforeRefresh = cached.map { it.id }.toSet(),
                         next = page.next
                     )
                     if (resetScroll) refreshVersion.value++
                 }.exceptionOrNull()
-                val reactionsError = reactionsRepository.syncReactions().exceptionOrNull()
+                val reactionsError = if (force) null else reactionsRepository.syncReactions().exceptionOrNull()
                 feedError.value = postsError?.let { "No se pudieron sincronizar los avisos." }
                     ?: reactionsError?.message
             } finally {
-                isRefreshing.value = false
+                if (requestVersion == version) isRefreshing.value = false
             }
         }
     }
@@ -144,8 +164,8 @@ class InicioFeedStateHolder @Inject constructor(
         val next = current.next ?: return
         if (isRefreshing.value || current.loading) return
         pages.value = current.copy(loading = true, failed = false)
-        viewModelScope.launch {
-            postRepository.loadFeedPage(next).fold(
+        pageRequest = viewModelScope.launch {
+            postRepository.loadFeedPage(next, current.following).fold(
                 onSuccess = { page ->
                     pages.value = current.copy(
                         ids = current.ids.orEmpty() + page.posts.map { it.id }, next = page.next, loading = false, failed = false
@@ -170,11 +190,12 @@ class InicioFeedStateHolder @Inject constructor(
         val (reactionsMap, types) = reactionData
         val category = filter.category
         val loaded = filter.pages.ids?.let { ids ->
-            posts.filter { it.id in ids || (it.id !in filter.pages.cachedBeforeRefresh && it.fecha > filter.pages.newest) }
-        } ?: posts.take(FEED_PAGE_SIZE)
+            posts.filter { it.id in ids || (!filter.pages.following &&
+                it.id !in filter.pages.cachedBeforeRefresh && it.fecha > filter.pages.newest) }
+        } ?: if (filter.pages.following) emptyList() else posts.take(FEED_PAGE_SIZE)
 
         // 1. Filtrar por preferencias de facultad (RF 3 y RF 6)
-        val filteredByPrefs = if (preferences.isEmpty()) {
+        val filteredByPrefs = if (filter.pages.following || preferences.isEmpty()) {
             loaded
         } else {
             loaded.filter { post ->
@@ -224,7 +245,9 @@ class InicioFeedStateHolder @Inject constructor(
             refreshVersion = filter.refreshVersion,
             hasMore = filter.pages.next != null,
             loadingMore = filter.pages.loading,
-            pageFailed = filter.pages.failed
+            pageFailed = filter.pages.failed,
+            following = filter.pages.following,
+            followingLoaded = filter.pages.ids != null
         )
     }
 
@@ -263,6 +286,10 @@ class InicioFeedStateHolder @Inject constructor(
             }
             InicioFeedEvent.Refresh -> refreshFeed()
             InicioFeedEvent.LoadMore -> loadMore()
+            is InicioFeedEvent.SelectFollowing -> if (pages.value.following != event.value) {
+                pages.value = FeedPages(following = event.value)
+                refreshFeed(force = true)
+            }
         }
     }
 }

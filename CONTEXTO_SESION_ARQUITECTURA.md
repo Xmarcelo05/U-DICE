@@ -23,7 +23,7 @@ En Windows, ejecuta `.\gradlew assembleDebug`. La variante de desarrollo sin con
 - `MainActivity` comparte `AuthStateHolder` con `UDiceApp`, que elige la interfaz pública o el grafo autenticado. El registro muestra un aviso de correo y Supabase redirige a `com.example.udice://confirm-email`. El enlace confirma el correo y la sesión se abre con la contraseña.
 - Cada ruta obtiene su ViewModel con Hilt y consume el estado con `collectAsStateWithLifecycle`. El feed combina flujos de avisos, votos, preferencias y guardados. El gesto de tirar desde arriba actualiza el feed. Tocar Inicio cuando ya está abierto solo desplaza la lista al primer aviso. Volver tras al menos 60 segundos en segundo plano también actualiza el feed.
 - Nueva publicación permite seleccionar y quitar hasta cuatro imágenes o un MP4. Muestra una vista previa cuadrada de las imágenes y el progreso de subida del video. Mis publicaciones permite buscar avisos propios y editar texto, emojis y archivos en las pestañas Publicación y Multimedia. El menú de los avisos propios en el feed abre ese editor o pide confirmación para eliminar. Feed y Detalle cargan las imágenes mediante Coil. El autor ve «Yo» en sus propios avisos. Cambiar de categoría devuelve la lista a su primer aviso.
-- Mi perfil permite elegir o quitar la foto. El feed recibe la ruta del avatar junto con cada aviso y conserva las iniciales como respaldo.
+- Mi perfil permite elegir o quitar la foto. El feed recibe la ruta del avatar junto con cada aviso y conserva las iniciales como respaldo. Desde el nombre o la foto se abre el perfil público, que lista los avisos en páginas de 20.
 - El detalle muestra un resumen de emojis, y el panel de participantes solicita páginas de 30 y permite filtrar por tipo de reacción.
 
 ## Persistencia y concurrencia
@@ -41,6 +41,13 @@ En Windows, ejecuta `.\gradlew assembleDebug`. La variante de desarrollo sin con
 - `publicaciones-videos` admite MP4 hasta 20 MiB sin límite de duración, con el mismo modelo de acceso que las imágenes. Android valida el archivo y genera un JPEG para el feed. El feed y el detalle reproducen con Media3 ExoPlayer después de pulsar ▶. El feed conserva un solo reproductor activo y lo suelta cuando la tarjeta sale de vista. Ambos desconectan la superficie al salir de la pantalla. El formulario admite hasta cuatro imágenes o un video por aviso.
 - Las migraciones SQL están en `supabase/migrations`. En el proyecto compartido se ejecutaron individualmente con Supabase CLI. Comprueba el esquema desplegado antes de intentar aplicar toda la serie a una base existente.
 
+### Perfiles públicos y seguimiento
+
+- Buscar tiene dos pestañas. Publicaciones conserva sus filtros. Personas busca publicadores por nombre y devuelve tarjetas con foto, facultad y total de seguidores.
+- El perfil de un publicador se abre desde Personas o al tocar su foto o nombre en el feed. Sus avisos se cargan en páginas de 20. Al abrir un aviso se reutiliza el detalle de la app y, al volver, se conserva la posición de la lista.
+- `PublisherRepository` consulta perfiles, avisos y conexiones mediante RPC autenticadas. Los perfiles públicos muestran el nombre, la foto, la facultad y el total de seguidores. Las listas de Mi perfil muestran los nombres y fotos de tus propias conexiones en páginas de 20.
+- La relación `seguimientos` se guarda por cuenta en Supabase. Su clave primaria evita duplicados y la RPC solo permite seguir a cuentas ASO distintas de la cuenta activa. La vista Siguiendo consulta avisos de esas cuentas en páginas de 50, mantiene el filtro por categoría y es independiente de las preferencias de facultad de Novedades. El estado vacío de Siguiendo se habilita tras recibir la primera página de forma exitosa y se oculta durante la recarga.
+
 ### Historial del esquema desplegado
 
 | Migración | Cambios de esquema y permisos |
@@ -57,6 +64,8 @@ En Windows, ejecuta `.\gradlew assembleDebug`. La variante de desarrollo sin con
 | [20261125000200](supabase/migrations/20261125000200_fotos_de_perfil.sql) | Añade `perfiles_udice.avatar_path`, el bucket `perfiles-imagenes` y políticas que limitan la edición del perfil y la escritura de archivos a su propietario. Las imágenes se leen mediante URL pública. |
 | [20261125000300](supabase/migrations/20261125000300_avatar_autor_en_feed.sql) | Añade el campo calculado de PostgREST que devuelve la ruta del avatar de cada autor sin exponer su perfil. |
 | [20261125000400](supabase/migrations/20261125000400_participantes_reacciones.sql) | Añade la RPC autenticada del detalle de reacciones. Devuelve totales por emoji y páginas de participantes con nombre y avatar. |
+| [20261125000500](supabase/migrations/20261125000500_perfiles_y_seguimientos.sql) | Crea seguimientos privados por cuenta y añade RPC autenticadas de búsqueda de personas, perfil público, avisos del publicador y feed Siguiendo. |
+| [20261125000600](supabase/migrations/20261125000600_contadores_y_seguidores.sql) | Añade contadores en las tarjetas públicas y RPC para consultar las listas propias de seguidores y cuentas seguidas. |
 
 El feed usa PostgREST con un cursor por fecha e ID. La paginación del feed y la edición de multimedia usan las columnas y políticas ya desplegadas.
 

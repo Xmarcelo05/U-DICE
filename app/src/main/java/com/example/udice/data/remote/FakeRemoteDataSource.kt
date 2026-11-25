@@ -141,7 +141,7 @@ class FakeRemoteDataSource @Inject constructor(
     override suspend fun searchPosts(search: com.example.udice.data.model.PostSearch, after: FeedCursor?): Result<com.example.udice.data.model.PostSearchPage> =
         Result.success(com.example.udice.data.model.PostSearchPage(emptyList(), null))
 
-    override suspend fun getFeedPage(after: FeedCursor?): Result<PostPage> =
+    override suspend fun getFeedPage(after: FeedCursor?, following: Boolean): Result<PostPage> =
         getPosts().map { PostPage(it, null) }
 
     override suspend fun getPosts(): Result<List<Post>> = withContext(ioDispatcher) {

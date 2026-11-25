@@ -31,6 +31,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.example.udice.BuildConfig
+import com.example.udice.ui.perfilpublico.PeopleSearch
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,7 +55,22 @@ import com.example.udice.data.model.Categoria
 import com.example.udice.data.model.Facultad
 
 @Composable
-fun BusquedaRoute(onPostClick: (String) -> Unit, stateHolder: BusquedaStateHolder = hiltViewModel()) {
+fun BusquedaRoute(onPostClick: (String) -> Unit, onPublisher: (String) -> Unit) {
+    var tab by rememberSaveable { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        if (BuildConfig.UDICE_SUPABASE) {
+            PrimaryTabRow(selectedTabIndex = tab) {
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Publicaciones") })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Personas") })
+            }
+        }
+        if (tab == 0) PublicationSearch(onPostClick)
+        else Box(Modifier.fillMaxSize().imePadding().padding(16.dp)) { PeopleSearch(onPublisher) }
+    }
+}
+
+@Composable
+private fun PublicationSearch(onPostClick: (String) -> Unit, stateHolder: BusquedaStateHolder = hiltViewModel()) {
     val query by stateHolder.query.collectAsStateWithLifecycle()
     val category by stateHolder.category.collectAsStateWithLifecycle()
     val faculty by stateHolder.faculty.collectAsStateWithLifecycle()

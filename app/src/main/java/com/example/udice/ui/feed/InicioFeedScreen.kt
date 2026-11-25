@@ -67,6 +67,7 @@ import com.example.udice.ui.theme.GrisPizarra
 fun InicioFeedRoute(
     onNavigateToPostDetail: (String) -> Unit = {},
     editableAuthorId: String? = null,
+    onPublisherClick: (String) -> Unit = {},
     ownAvatarUrl: String? = null,
     onEditPost: (String) -> Unit = {},
     scrollRequested: Boolean = false,
@@ -102,6 +103,8 @@ fun InicioFeedRoute(
                 },
                 onPostClick = onNavigateToPostDetail,
                 editableAuthorId = editableAuthorId,
+                onPublisherClick = onPublisherClick,
+                onFollowingChange = { stateHolder.onEvent(InicioFeedEvent.SelectFollowing(it)) },
                 ownAvatarUrl = ownAvatarUrl,
                 onEditPost = onEditPost,
                 scrollRequested = scrollRequested,
@@ -144,13 +147,15 @@ fun InicioFeedScreen(
     onSaveClick: (String) -> Unit,
     onPostClick: (String) -> Unit = {},
     editableAuthorId: String? = null,
+    onPublisherClick: (String) -> Unit = {},
     ownAvatarUrl: String? = null,
     onEditPost: (String) -> Unit = {},
     onDeletePost: (String) -> Unit = {},
     onLoadMore: () -> Unit = {},
     scrollRequested: Boolean = false,
     onScrollHandled: () -> Unit = {},
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onFollowingChange: (Boolean) -> Unit = {}
 ) {
     var deletingId by rememberSaveable { mutableStateOf<String?>(null) }
     state.posts.firstOrNull { it.post.id == deletingId && it.post.autorId == editableAuthorId }?.let { item ->
@@ -192,6 +197,7 @@ fun InicioFeedScreen(
     }
     var lastAppliedRefresh by rememberSaveable { mutableIntStateOf(0) }
     var lastCategory by rememberSaveable { mutableStateOf(state.selectedCategory) }
+    LaunchedEffect(state.following) { activeVideoId = null }
     LaunchedEffect(state.refreshVersion, state.selectedCategory) {
         if (state.refreshVersion > lastAppliedRefresh || state.selectedCategory != lastCategory) {
             listState.requestScrollToItem(0)
@@ -211,6 +217,15 @@ fun InicioFeedScreen(
                 .fillMaxSize()
                 .widthIn(max = 640.dp)
         ) {
+            if (com.example.udice.BuildConfig.UDICE_SUPABASE) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(selected = !state.following, onClick = { onFollowingChange(false) }, label = { Text("Novedades") })
+                    FilterChip(selected = state.following, onClick = { onFollowingChange(true) }, label = { Text("Siguiendo") })
+                }
+            }
             // Fila de chips de filtro por categoría (RF 13)
             Row(
                 modifier = Modifier
@@ -263,7 +278,8 @@ fun InicioFeedScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (state.posts.isEmpty()) item {
+                    val showEmpty = !state.following || (state.followingLoaded && !state.isRefreshing)
+                    if (state.posts.isEmpty() && showEmpty) item {
                         Box(
                             modifier = Modifier
                                 .fillParentMaxSize()
@@ -283,6 +299,7 @@ fun InicioFeedScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = if (state.hasMore) "No hay coincidencias en los avisos cargados."
+                                        else if (state.following) "No hay avisos visibles de los publicadores que sigues."
                                         else "No hay avisos para los filtros seleccionados o tus facultades de interés.",
                                     fontSize = 14.sp,
                                     color = GrisPizarra,
@@ -295,6 +312,9 @@ fun InicioFeedScreen(
                     items(state.posts, key = { it.post.id }) { item ->
                         PostCard(
                             post = item.post,
+                            onPublisherClick = if (com.example.udice.BuildConfig.UDICE_SUPABASE) {
+                                { activeVideoId = null; onPublisherClick(item.post.autorId) }
+                            } else null,
                             authorAvatarUrl = if (item.post.autorId == editableAuthorId) ownAvatarUrl else item.post.authorAvatarUrl,
                             reactionSummary = item.reactions,
                             isSaved = item.isSaved,

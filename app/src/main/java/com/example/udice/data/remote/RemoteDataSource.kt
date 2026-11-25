@@ -8,7 +8,7 @@ import com.example.udice.data.model.User
 interface RemoteDataSource {
     suspend fun getPosts(): Result<List<Post>>
     suspend fun searchPosts(search: com.example.udice.data.model.PostSearch, after: FeedCursor?): Result<com.example.udice.data.model.PostSearchPage>
-    suspend fun getFeedPage(after: FeedCursor?): Result<PostPage>
+    suspend fun getFeedPage(after: FeedCursor?, following: Boolean): Result<PostPage>
     suspend fun getPostById(id: String): Result<Post?>
     suspend fun createPost(post: Post): Result<Post>
     suspend fun updatePost(post: Post): Result<Post>
