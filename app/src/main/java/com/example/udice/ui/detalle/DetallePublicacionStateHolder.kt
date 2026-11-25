@@ -4,6 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.udice.data.model.Post
+import com.example.udice.data.model.ReactionCount
+import com.example.udice.data.model.ReactionParticipant
+import com.example.udice.data.repository.ReactionsRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.asStateFlow
 import com.example.udice.data.repository.PostRepository
 import com.example.udice.data.repository.SavedPostsRepository
 import com.example.udice.data.repository.SessionRepository
@@ -37,12 +42,23 @@ sealed interface DetallePublicacionEvent {
     data object ToggleSave : DetallePublicacionEvent
 }
 
+data class ReactionPanelState(
+    val counts: List<ReactionCount> = emptyList(),
+    val people: List<ReactionParticipant> = emptyList(),
+    val open: Boolean = false,
+    val selected: String? = null,
+    val next: String? = null,
+    val loading: Boolean = false,
+    val failed: Boolean = false
+)
+
 @HiltViewModel
 class DetallePublicacionStateHolder @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val postRepository: PostRepository,
     private val savedPostsRepository: SavedPostsRepository,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val reactions: ReactionsRepository
 ) : ViewModel() {
 
     private val postId: String = savedStateHandle.get<String>(NavRoutes.POST_ID_ARG).orEmpty()
@@ -51,12 +67,21 @@ class DetallePublicacionStateHolder @Inject constructor(
     private val actionError = MutableStateFlow<String?>(null)
     private val fetching = MutableStateFlow(postId.isNotBlank())
 
+    private val panel = MutableStateFlow(ReactionPanelState())
+    val reactionPanel = panel.asStateFlow()
+    private var peopleJob: Job? = null
+
     init {
         if (postId.isNotBlank()) viewModelScope.launch {
             actionError.value = postRepository.loadPostIfMissing(postId).exceptionOrNull()?.let {
                 "No se pudo cargar el aviso."
             }
             fetching.value = false
+        }
+        if (postId.isNotBlank()) viewModelScope.launch {
+            reactions.reactionDetails(postId, includePeople = false).onSuccess {
+                if (!panel.value.open) panel.value = panel.value.copy(counts = it.counts)
+            }
         }
     }
 
@@ -107,6 +132,43 @@ class DetallePublicacionStateHolder @Inject constructor(
     fun onEvent(event: DetallePublicacionEvent) {
         when (event) {
             DetallePublicacionEvent.ToggleSave -> toggleSave()
+        }
+    }
+
+    fun openReactions() {
+        panel.value = panel.value.copy(open = true)
+        selectReaction(null)
+    }
+
+    fun closeReactions() {
+        peopleJob?.cancel()
+        panel.value = ReactionPanelState(counts = panel.value.counts)
+    }
+
+    fun selectReaction(type: String?) {
+        peopleJob?.cancel()
+        panel.value = panel.value.copy(selected = type, people = emptyList(), next = null)
+        loadPeople(null)
+    }
+
+    fun loadMoreReactions() {
+        if (panel.value.loading) return
+        if (panel.value.next != null || panel.value.failed) loadPeople(panel.value.next)
+    }
+
+    private fun loadPeople(cursor: String?) {
+        val current = panel.value
+        panel.value = current.copy(loading = true, failed = false)
+        peopleJob = viewModelScope.launch {
+            reactions.reactionDetails(postId, true, current.selected, cursor).fold(
+                onSuccess = { page ->
+                    panel.value = current.copy(
+                        counts = page.counts, people = (current.people + page.participants).distinctBy { it.id },
+                        next = page.next, loading = false, failed = false
+                    )
+                },
+                onFailure = { panel.value = current.copy(loading = false, failed = true) }
+            )
         }
     }
 

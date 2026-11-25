@@ -35,6 +35,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.remember
+import com.example.udice.ui.components.FeedPublicationVideo
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.getValue
@@ -65,6 +67,7 @@ import com.example.udice.ui.theme.GrisPizarra
 fun InicioFeedRoute(
     onNavigateToPostDetail: (String) -> Unit = {},
     editableAuthorId: String? = null,
+    ownAvatarUrl: String? = null,
     onEditPost: (String) -> Unit = {},
     scrollRequested: Boolean = false,
     onScrollHandled: () -> Unit = {},
@@ -99,6 +102,7 @@ fun InicioFeedRoute(
                 },
                 onPostClick = onNavigateToPostDetail,
                 editableAuthorId = editableAuthorId,
+                ownAvatarUrl = ownAvatarUrl,
                 onEditPost = onEditPost,
                 scrollRequested = scrollRequested,
                 onScrollHandled = onScrollHandled,
@@ -140,6 +144,7 @@ fun InicioFeedScreen(
     onSaveClick: (String) -> Unit,
     onPostClick: (String) -> Unit = {},
     editableAuthorId: String? = null,
+    ownAvatarUrl: String? = null,
     onEditPost: (String) -> Unit = {},
     onDeletePost: (String) -> Unit = {},
     onLoadMore: () -> Unit = {},
@@ -166,6 +171,12 @@ fun InicioFeedScreen(
     }
 
     val listState = rememberLazyListState()
+    var activeVideoId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(activeVideoId) {
+        val id = activeVideoId ?: return@LaunchedEffect
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.key == id } }.first { visible -> !visible }
+        if (activeVideoId == id) activeVideoId = null
+    }
     LaunchedEffect(scrollRequested) {
         if (scrollRequested) {
             listState.scrollToItem(0)
@@ -180,11 +191,13 @@ fun InicioFeedScreen(
         }
     }
     var lastAppliedRefresh by rememberSaveable { mutableIntStateOf(0) }
-    LaunchedEffect(state.refreshVersion) {
-        if (state.refreshVersion > lastAppliedRefresh) {
+    var lastCategory by rememberSaveable { mutableStateOf(state.selectedCategory) }
+    LaunchedEffect(state.refreshVersion, state.selectedCategory) {
+        if (state.refreshVersion > lastAppliedRefresh || state.selectedCategory != lastCategory) {
             listState.requestScrollToItem(0)
         }
         lastAppliedRefresh = state.refreshVersion
+        lastCategory = state.selectedCategory
     }
 
     Box(
@@ -282,12 +295,27 @@ fun InicioFeedScreen(
                     items(state.posts, key = { it.post.id }) { item ->
                         PostCard(
                             post = item.post,
+                            authorAvatarUrl = if (item.post.autorId == editableAuthorId) ownAvatarUrl else item.post.authorAvatarUrl,
                             reactionSummary = item.reactions,
                             isSaved = item.isSaved,
                             reactionTypes = state.reactionTypes,
                             onReactionClick = { tipo -> onReactionClick(item.post.id, tipo) },
                             onSaveClick = { onSaveClick(item.post.id) },
-                            onPostClick = { onPostClick(item.post.id) },
+                            onPostClick = {
+                                activeVideoId = null
+                                onPostClick(item.post.id)
+                            },
+                            videoContent = item.post.videoUrl?.let { url ->
+                                {
+                                    FeedPublicationVideo(
+                                        url,
+                                        item.post.imageUrl,
+                                        active = activeVideoId == item.post.id,
+                                        onPlay = { activeVideoId = item.post.id },
+                                        onStop = { if (activeVideoId == item.post.id) activeVideoId = null }
+                                    )
+                                }
+                            },
                             onEditClick = if (item.post.autorId == editableAuthorId) {
                                 { onEditPost(item.post.id) }
                             } else null,

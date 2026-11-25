@@ -1,5 +1,6 @@
 package com.example.udice.data.repository
 
+import android.net.Uri
 import com.example.udice.data.model.Facultad
 import com.example.udice.data.model.Rol
 import com.example.udice.data.model.User
@@ -23,7 +24,8 @@ import org.json.JSONObject
 @Singleton
 class CloudSessionRepository @Inject constructor(
     private val http: CloudHttpClient,
-    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val photos: PublicationImageStorage
 ) : SessionRepository {
     private data class Tokens(val access: String, val refresh: String, val expiresAt: Long)
 
@@ -56,7 +58,7 @@ class CloudSessionRepository @Inject constructor(
             val newTokens = requestTokens("password", JSONObject().put("email", email.trim()).put("password", password))
             val identity = JSONObject(http.request("auth/v1/user", token = newTokens.access)).getString("id")
             val rows = JSONArray(http.request(
-                "rest/v1/perfiles_udice?id=eq.$identity&select=id,email,nombre,rol,facultad,carrera",
+                "rest/v1/perfiles_udice?id=eq.$identity&select=id,email,nombre,rol,facultad,carrera,avatar_path",
                 token = newTokens.access
             ))
             val profile = rows.optJSONObject(0)?.toUser()
@@ -64,6 +66,27 @@ class CloudSessionRepository @Inject constructor(
             tokens = newTokens
             user.value = profile
         }
+    }
+
+    override suspend fun updateProfilePhoto(photo: Uri?): Result<Unit> = ioResult {
+        val previous = user.value ?: error("Vuelve a iniciar sesión.")
+        val path = photo?.let { photos.saveAvatar(it, previous.id, this) }
+        try {
+            signedRequest { token ->
+                check(user.value?.id == previous.id) { "La sesión cambió. Vuelve a intentarlo." }
+                val rows = JSONArray(http.request(
+                    "rest/v1/perfiles_udice?id=eq.${previous.id}", "PATCH", token,
+                    JSONObject().put("avatar_path", path ?: JSONObject.NULL), returnRow = true
+                ))
+                user.value = rows.optJSONObject(0)?.toUser() ?: error("No se pudo guardar la foto de perfil.")
+            }
+        } catch (error: CloudRequestException) {
+            if (path != null && error.status in 400..499) {
+                dataResult { photos.remove(photos.avatarUrl(path), previous.id, this) }
+            }
+            throw error
+        }
+        previous.avatarUrl?.let { url -> dataResult { photos.remove(url, previous.id, this) } }
     }
 
     override suspend fun logout(): Result<Unit> = ioResult {
@@ -94,7 +117,7 @@ class CloudSessionRepository @Inject constructor(
     private suspend fun loadFacultyAccounts() {
         signedRequest { token ->
             val response = http.request(
-                "rest/v1/perfiles_udice?rol=eq.ASO&select=id,email,nombre,rol,facultad,carrera&order=nombre",
+                "rest/v1/perfiles_udice?rol=eq.ASO&select=id,email,nombre,rol,facultad,carrera,avatar_path&order=nombre",
                 token = token
             )
             val rows = JSONArray(response)
@@ -142,7 +165,8 @@ class CloudSessionRepository @Inject constructor(
     private fun JSONObject.toUser() = User(
         getString("id"), getString("nombre"), getString("email"), Rol.valueOf(getString("rol")),
         if (isNull("facultad")) null else Facultad.valueOf(getString("facultad")),
-        if (isNull("carrera")) null else getString("carrera")
+        if (isNull("carrera")) null else getString("carrera"),
+        if (isNull("avatar_path")) null else photos.avatarUrl(getString("avatar_path"))
     )
 }
 

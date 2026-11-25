@@ -1,5 +1,6 @@
 package com.example.udice.data.repository
 
+import android.net.Uri
 import com.example.udice.data.model.Facultad
 import com.example.udice.data.model.User
 import kotlinx.coroutines.flow.Flow
@@ -14,5 +15,7 @@ interface SessionRepository {
     suspend fun createFacultyAccount(name: String, email: String, password: String, faculty: Facultad): Result<Unit>
     suspend fun resetFacultyPassword(id: String, password: String): Result<Unit>
     suspend fun deleteFacultyAccount(id: String): Result<Unit>
+    suspend fun updateProfilePhoto(photo: Uri?): Result<Unit> =
+        Result.failure(UnsupportedOperationException("Esta opción requiere una cuenta en Supabase."))
     suspend fun logout(): Result<Unit>
 }

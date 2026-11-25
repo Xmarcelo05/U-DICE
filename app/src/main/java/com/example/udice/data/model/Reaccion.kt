@@ -19,6 +19,14 @@ data class Reaccion(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+data class ReactionCount(val type: String, val emoji: String, val label: String, val count: Int)
+data class ReactionParticipant(val id: String, val name: String, val avatarUrl: String?, val emoji: String)
+data class ReactionDetails(
+    val counts: List<ReactionCount>,
+    val participants: List<ReactionParticipant>,
+    val next: String?
+)
+
 data class ReaccionSummary(
     val userReaction: TipoReaccion? = null,
     val counts: Map<TipoReaccion, Int> = emptyMap(),

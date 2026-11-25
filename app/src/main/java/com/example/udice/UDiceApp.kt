@@ -139,6 +139,7 @@ private fun SignedInApp(user: User, logoutEnabled: Boolean, error: String?, onLo
                         onScrollHandled = { entry.savedStateHandle[FEED_SCROLL_REQUEST] = false },
                         onNavigateToPostDetail = goToDetail,
                         editableAuthorId = user.id.takeIf { user.rol == Rol.ASO },
+                        ownAvatarUrl = user.avatarUrl,
                         onEditPost = { navController.navigate(NavRoutes.editarPublicacion(it)) { launchSingleTop = true } }
                     )
                 }

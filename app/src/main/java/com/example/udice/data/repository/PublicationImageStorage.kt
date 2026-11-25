@@ -6,6 +6,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.example.udice.data.remote.supabase.CloudHttpClient
 import com.example.udice.data.remote.supabase.SupabaseConfig
+import com.example.udice.data.remote.supabase.SupabaseConfig.AVATAR_BUCKET
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -23,7 +24,15 @@ class PublicationImageStorage @Inject constructor(
     private val publicRoot = SupabaseConfig.BASE_URL.removeSuffix("/rest/v1") + "/storage/v1/object/public"
     private val localDirectory get() = File(context.filesDir, "publication-images")
 
-    suspend fun save(uri: Uri, userId: String, session: SessionRepository): String {
+    suspend fun save(uri: Uri, userId: String, session: SessionRepository): String =
+        saveImage(uri, userId, session, IMAGE_BUCKET)
+
+    suspend fun saveAvatar(uri: Uri, userId: String, session: CloudSessionRepository): String =
+        saveImage(uri, userId, session, AVATAR_BUCKET).removePrefix("$publicRoot/$AVATAR_BUCKET/")
+
+    fun avatarUrl(path: String): String = SupabaseConfig.avatarUrl(path)
+
+    private suspend fun saveImage(uri: Uri, userId: String, session: SessionRepository, bucket: String): String {
         val mimeType = context.contentResolver.getType(uri)
         val extension = when (mimeType) {
             "image/jpeg" -> "jpg"
@@ -32,7 +41,7 @@ class PublicationImageStorage @Inject constructor(
             else -> throw IllegalArgumentException("Selecciona una imagen JPG, PNG o WebP.")
         }
         val bytes = read(uri, 5 * 1024 * 1024, "La imagen debe tener un tamaño de hasta 5 MB.")
-        return store(bytes, checkNotNull(mimeType), extension, IMAGE_BUCKET, userId, session)
+        return store(bytes, checkNotNull(mimeType), extension, bucket, userId, session)
     }
 
     suspend fun saveVideo(
@@ -108,7 +117,7 @@ class PublicationImageStorage @Inject constructor(
 
     suspend fun remove(url: String, userId: String, session: SessionRepository) {
         if (session is CloudSessionRepository) {
-            val bucket = listOf(IMAGE_BUCKET, VIDEO_BUCKET).firstOrNull {
+            val bucket = listOf(IMAGE_BUCKET, VIDEO_BUCKET, AVATAR_BUCKET).firstOrNull {
                 url.startsWith("$publicRoot/$it/$userId/")
             } ?: return
             val filename = url.removePrefix("$publicRoot/$bucket/$userId/")

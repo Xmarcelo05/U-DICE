@@ -57,7 +57,7 @@ class SupabaseRemoteDataSource @Inject constructor(
 
     private suspend fun getCloudPostRows(): Result<String> = dataResult {
         val rows = JSONArray()
-        var query = "select=*&order=id.asc"
+        var query = "select=*,udice_avatar_autor&order=id.asc"
         while (true) {
             val page = JSONArray(cloudPosts("GET", query).getOrThrow())
             if (page.length() == 0) break
@@ -65,7 +65,7 @@ class SupabaseRemoteDataSource @Inject constructor(
                 rows.put(page.getJSONObject(index))
             }
             val lastId = page.getJSONObject(page.length() - 1).getString("id")
-            query = "select=*&order=id.asc&id=gt.$lastId"
+            query = "select=*,udice_avatar_autor&order=id.asc&id=gt.$lastId"
         }
         rows.toString()
     }
@@ -93,7 +93,8 @@ class SupabaseRemoteDataSource @Inject constructor(
         imageUrl = if (has("image_url") && !isNull("image_url")) getString("image_url") else null,
         allowedReactionIds = reactionIds(),
         videoUrl = if (isNull("video_url")) null else getString("video_url"),
-        additionalImageUrls = additionalImages()
+        additionalImageUrls = additionalImages(),
+        authorAvatarUrl = if (isNull("udice_avatar_autor")) null else SupabaseConfig.avatarUrl(getString("udice_avatar_autor"))
     )
 
     private fun JSONObject.additionalImages(): List<String> =
@@ -136,7 +137,7 @@ class SupabaseRemoteDataSource @Inject constructor(
             val date = Uri.encode(it.date)
             "&or=(fecha.lt.$date,and(fecha.eq.$date,id.lt.${it.id}))"
         }.orEmpty()
-        return cloudPosts("GET", "select=*&order=fecha.desc,id.desc&limit=$FEED_PAGE_SIZE$boundary")
+        return cloudPosts("GET", "select=*,udice_avatar_autor&order=fecha.desc,id.desc&limit=$FEED_PAGE_SIZE$boundary")
             .mapCatching { response ->
                 val rows = JSONArray(response)
                 val posts = List(rows.length()) { rows.getJSONObject(it).toPost() }
@@ -170,7 +171,7 @@ class SupabaseRemoteDataSource @Inject constructor(
     }
 
     override suspend fun getPostById(id: String): Result<Post?> {
-        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("GET", "id=eq.$id&select=*")
+        val result = if (BuildConfig.UDICE_SUPABASE) cloudPosts("GET", "id=eq.$id&select=*,udice_avatar_autor")
             else client.get("publicaciones", "id=eq.$id&select=*")
         return result.mapCatching { jsonStr ->
             val array = JSONArray(jsonStr)

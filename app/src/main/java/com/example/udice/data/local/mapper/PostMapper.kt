@@ -24,7 +24,8 @@ fun PostEntity.toDomain(): Post = Post(
     additionalImageUrls = additionalImageUrls?.let { json ->
         val urls = JSONArray(json)
         List(urls.length()) { urls.getString(it) }
-    }.orEmpty()
+    }.orEmpty(),
+    authorAvatarUrl = authorAvatarUrl
 )
 
 fun Post.toEntity(): PostEntity = PostEntity(
@@ -41,5 +42,6 @@ fun Post.toEntity(): PostEntity = PostEntity(
     imageUrl = imageUrl,
     allowedReactionIds = allowedReactionIds?.joinToString(","),
     videoUrl = videoUrl,
-    additionalImageUrls = additionalImageUrls.takeIf { it.isNotEmpty() }?.let { JSONArray(it).toString() }
+    additionalImageUrls = additionalImageUrls.takeIf { it.isNotEmpty() }?.let { JSONArray(it).toString() },
+    authorAvatarUrl = authorAvatarUrl
 )

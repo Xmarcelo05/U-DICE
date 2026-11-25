@@ -14,7 +14,8 @@ data class Post(
     val imageUrl: String? = null,
     val allowedReactionIds: List<String>? = null,
     val videoUrl: String? = null,
-    val additionalImageUrls: List<String> = emptyList()
+    val additionalImageUrls: List<String> = emptyList(),
+    val authorAvatarUrl: String? = null
 ) {
     val imageUrls: List<String> get() = listOfNotNull(imageUrl) + additionalImageUrls
 }

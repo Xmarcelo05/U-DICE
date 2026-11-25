@@ -6,5 +6,6 @@ data class User(
     val email: String,
     val rol: Rol,
     val facultad: Facultad? = null,
-    val carrera: String? = null
+    val carrera: String? = null,
+    val avatarUrl: String? = null
 )

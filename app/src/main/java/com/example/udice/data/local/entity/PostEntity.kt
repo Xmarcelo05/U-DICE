@@ -18,5 +18,6 @@ data class PostEntity(
     val imageUrl: String?,
     val allowedReactionIds: String?,
     val videoUrl: String?,
-    val additionalImageUrls: String?
+    val additionalImageUrls: String?,
+    val authorAvatarUrl: String?
 )

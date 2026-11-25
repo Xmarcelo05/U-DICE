@@ -23,7 +23,7 @@ import com.example.udice.data.local.entity.UserEntity
         ReaccionEntity::class,
         ReactionTypeEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class UDiceDatabase : RoomDatabase() {

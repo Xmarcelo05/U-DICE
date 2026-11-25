@@ -8,6 +8,10 @@ import com.example.udice.data.local.dao.ReaccionDao
 import com.example.udice.data.local.entity.ReaccionEntity
 import com.example.udice.data.local.entity.ReactionTypeEntity
 import com.example.udice.data.model.ReaccionSummary
+import com.example.udice.data.model.ReactionCount
+import com.example.udice.data.model.ReactionDetails
+import com.example.udice.data.model.ReactionParticipant
+import com.example.udice.data.remote.supabase.SupabaseConfig
 import com.example.udice.data.model.Rol
 import com.example.udice.data.model.TipoReaccion
 import com.example.udice.data.remote.supabase.SupabaseHttpClient
@@ -202,6 +206,35 @@ class ReactionsRepositoryImpl @Inject constructor(
                 }
             }
             Unit
+        }
+    }
+
+    override suspend fun reactionDetails(
+        postId: String, includePeople: Boolean, type: String?, after: String?
+    ): Result<ReactionDetails> = withContext(ioDispatcher) {
+        dataResult {
+            val session = sessionRepository as? CloudSessionRepository
+                ?: return@dataResult ReactionDetails(emptyList(), emptyList(), null)
+            val body = JSONObject().put("aviso", postId).put("incluir_personas", includePeople)
+                .put("tipo_filtro", type ?: JSONObject.NULL).put("cursor_usuario", after ?: JSONObject.NULL)
+            val result = session.signedRequest { token ->
+                JSONObject(cloudHttp.request("rest/v1/rpc/udice_detalle_reacciones", "POST", token, body))
+            }
+            val totals = result.getJSONArray("totales")
+            val counts = List(totals.length()) { index ->
+                val row = totals.getJSONObject(index)
+                ReactionCount(row.getString("tipo"), row.getString("emoji"), row.getString("label"), row.getInt("total"))
+            }
+            val people = result.getJSONArray("personas")
+            val participants = List(people.length()) { index ->
+                val row = people.getJSONObject(index)
+                ReactionParticipant(
+                    row.getString("id"), row.getString("nombre"),
+                    if (row.isNull("avatar_path")) null else SupabaseConfig.avatarUrl(row.getString("avatar_path")),
+                    row.getString("emoji")
+                )
+            }
+            ReactionDetails(counts, participants, if (result.isNull("siguiente")) null else result.getString("siguiente"))
         }
     }
 

@@ -64,12 +64,15 @@ fun DetallePublicacionRoute(
     stateHolder: DetallePublicacionStateHolder = hiltViewModel()
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
+    val panel by stateHolder.reactionPanel.collectAsStateWithLifecycle()
 
     DetallePublicacionScreen(
         state = state,
         onToggleSave = { stateHolder.onEvent(DetallePublicacionEvent.ToggleSave) },
-        onBack = onBack
+        onBack = onBack,
+        reactionButton = { ReactionSummaryButton(panel.counts, stateHolder::openReactions) }
     )
+    if (panel.open) ReactionPeopleSheet(panel, stateHolder::closeReactions, stateHolder::selectReaction, stateHolder::loadMoreReactions)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -77,7 +80,8 @@ fun DetallePublicacionRoute(
 fun DetallePublicacionScreen(
     state: DetallePublicacionUiState,
     onToggleSave: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    reactionButton: @Composable () -> Unit = {}
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -273,6 +277,8 @@ fun DetallePublicacionScreen(
                                 )
 
                                 Spacer(Modifier.height(4.dp))
+
+                                reactionButton()
 
                                 if (state.isSaved) {
                                     OutlinedButton(

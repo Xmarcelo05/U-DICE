@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import com.example.udice.ui.components.PublicationImage
+import com.example.udice.ui.components.PublicationVideoThumbnail
 import com.example.udice.ui.components.PublicationImageGrid
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -44,6 +44,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,7 +81,9 @@ fun PostCard(
     onPostClick: () -> Unit = {},
     reactionTypes: List<TipoReaccion> = TipoReaccion.defaults,
     onEditClick: (() -> Unit)? = null,
-    onDeleteClick: (() -> Unit)? = null
+    onDeleteClick: (() -> Unit)? = null,
+    authorAvatarUrl: String? = post.authorAvatarUrl,
+    videoContent: (@Composable () -> Unit)? = null
 ) {
     val categoryColor = when (post.categoria) {
         Categoria.EVENTO -> ColorEvento
@@ -129,13 +133,21 @@ fun PostCard(
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
+                    authorAvatarUrl?.let { url ->
+                        AsyncImage(
+                            model = url,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = post.autorNombre.ifEmpty { post.facultad.displayName },
+                        text = if (onEditClick != null) "Yo" else post.autorNombre.ifEmpty { post.facultad.displayName },
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
@@ -170,7 +182,11 @@ fun PostCard(
                     var expanded by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { expanded = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Opciones de publicación", tint = AzulPrincipal)
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "Opciones de publicación",
+                                tint = AzulPrincipal
+                            )
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             DropdownMenuItem(text = { Text("Editar") }, onClick = {
@@ -212,19 +228,13 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            if (post.imageUrls.isNotEmpty()) {
-                if (post.videoUrl != null) {
-                    post.imageUrl?.let { PublicationImage(it, "Miniatura del video") }
-                } else {
-                    PublicationImageGrid(post.imageUrls)
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-
             if (post.videoUrl != null) {
-                androidx.compose.material3.TextButton(onClick = onPostClick) {
-                    Text("Ver video")
-                }
+                if (videoContent != null) videoContent()
+                else PublicationVideoThumbnail(post.imageUrl, "Abrir detalle del video", onPostClick)
+                Spacer(modifier = Modifier.height(10.dp))
+            } else if (post.imageUrls.isNotEmpty()) {
+                PublicationImageGrid(post.imageUrls)
+                Spacer(modifier = Modifier.height(10.dp))
             }
 
             // Chips informativos: Facultad y Alcance

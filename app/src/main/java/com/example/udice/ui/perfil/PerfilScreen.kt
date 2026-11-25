@@ -1,5 +1,9 @@
 package com.example.udice.ui.perfil
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +31,16 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.layout.ContentScale
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import com.example.udice.BuildConfig
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,9 +62,14 @@ fun PerfilScreen(
     logoutEnabled: Boolean,
     onLogout: () -> Unit,
     onSavedPosts: () -> Unit,
-    onMyPosts: () -> Unit
+    onMyPosts: () -> Unit,
+    stateHolder: PerfilStateHolder = hiltViewModel()
 ) {
     val scrollState = rememberScrollState()
+    val photoState by stateHolder.photoState.collectAsStateWithLifecycle()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { photo: Uri? ->
+        if (photo != null) stateHolder.updatePhoto(photo)
+    }
 
     Column(
         modifier = Modifier
@@ -87,6 +105,27 @@ fun PerfilScreen(
                         fontWeight = FontWeight.Bold,
                         color = Blanco
                     )
+                    user.avatarUrl?.let { url ->
+                        AsyncImage(
+                            model = url,
+                            contentDescription = "Foto de perfil",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(72.dp)
+                        )
+                    }
+                }
+                if (BuildConfig.UDICE_SUPABASE) {
+                    TextButton(
+                        enabled = !photoState.saving,
+                        onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                    ) { Text(if (user.avatarUrl == null) "Agregar foto de perfil" else "Cambiar foto de perfil") }
+                    if (user.avatarUrl != null) {
+                        TextButton(enabled = !photoState.saving, onClick = { stateHolder.updatePhoto(null) }) {
+                            Text("Quitar foto")
+                        }
+                    }
+                    if (photoState.saving) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    photoState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
