@@ -28,10 +28,10 @@ flowchart TD
         Nav --> Search["BusquedaRoute<br/>Texto, categoría, facultad y fechas"]
         Nav --> Pref["PreferenciasRoute<br/>PreferenciasStateHolder → PreferenciasScreen"]
         Nav -->|"ASO"| New["NuevaPublicacionRoute<br/>NuevaPublicacionStateHolder → NuevaPublicacionScreen"]
-        Nav --> Profile["PerfilScreen<br/>Cuenta activa, guardados y avisos propios"]
+        Nav --> Profile["PerfilScreen y PerfilStateHolder<br/>Foto, guardados y avisos propios"]
         Profile --> Own["MisPublicacionesRoute<br/>MisPublicacionesStateHolder → MisPublicacionesScreen"]
         Profile --> Saved["GuardadosRoute<br/>GuardadosStateHolder → GuardadosScreen"]
-        Feed --> Card["PostCard<br/>Aviso, reacciones y guardado"]
+        Feed --> Card["PostCard<br/>Foto del autor, reacciones y guardado"]
         Card --> Detail["DetallePublicacionRoute<br/>DetallePublicacionStateHolder → DetallePublicacionScreen"]
         Saved --> Detail
         Own --> Detail
@@ -41,6 +41,8 @@ flowchart TD
         Card --> Gallery
         Detail --> Gallery
         Detail --> Player["Media3 ExoPlayer<br/>Reproducción bajo demanda"]
+        Card --> Player
+        Detail --> People["Panel de reacciones<br/>Participantes, avatares y filtros por emoji"]
     end
 
     subgraph DATA["Repositorios, persistencia y sincronización"]
@@ -60,9 +62,10 @@ flowchart TD
         LocalSession --> Local
         PrefRepo -->|"Preferencias por cuenta"| Local
         SavedRepo -->|"Guardados por cuenta"| Local
-        Local --> Room["Room · UDiceDatabase v7<br/>PostDao, UserDao, PreferenceDao,<br/>SavedPostDao y ReaccionDao"]
+        Local --> Room["Room · UDiceDatabase v8<br/>PostDao, UserDao, PreferenceDao,<br/>SavedPostDao y ReaccionDao"]
         Votes -->|"ReaccionDao: votos y catálogo"| Room
         Seed["SeedDataCallback<br/>Datos iniciales de desarrollo"] -. "Solo modo local" .-> Room
+        CloudSession -->|"Foto de perfil"| Media
         CloudSession --> HTTP["CloudHttpClient<br/>Peticiones HTTPS con token"]
         Remote --> HTTP
         Votes --> HTTP
@@ -84,16 +87,18 @@ flowchart TD
     Saved --> SavedRepo
     Detail --> Posts
     Detail --> SavedRepo
+    Profile --> Session
+    People --> Votes
 
     subgraph CLOUD["Supabase"]
         AuthAPI["Auth<br/>Registro, confirmación y tokens"]
         REST["PostgREST<br/>Publicaciones, perfiles y catálogo"]
-        RPC["RPC de votos y búsqueda<br/>Emojis por aviso y hasta 20 resultados por página"]
+        RPC["RPC de votos, búsqueda y participantes<br/>Emojis por aviso y resultados paginados"]
         Edge["Edge Function udice-faculty-admin<br/>Gestión de cuentas ASO"]
-        Storage["Storage<br/>publicaciones-imagenes y publicaciones-videos"]
+        Storage["Storage<br/>publicaciones-imagenes, publicaciones-videos y perfiles-imagenes"]
         Policies["RLS y permisos de base de datos<br/>Lectura autenticada y escrituras por autor"]
         REST --> Policies
-        Storage --> StoragePolicy["Políticas de Storage<br/>Carga ASO en carpeta propia y lectura por URL"]
+        Storage --> StoragePolicy["Políticas de Storage<br/>Escritura en carpeta propia y lectura por URL"]
     end
 
     HTTP --> AuthAPI
@@ -121,11 +126,12 @@ flowchart TD
 - **Avisos.** Supabase recibe los cambios y Room expone el estado reactivo a la interfaz. El feed empieza con hasta 50 avisos y carga más al llegar al final. Cada página actualiza Room. Ante un fallo de red se conserva la última copia.
 - **Guardados y preferencias.** Se almacenan por cuenta en Room y permanecen en el dispositivo.
 - **Registro.** Supabase solicita verificar el correo. El enlace abre U-DICE y el usuario puede iniciar sesión con su contraseña.
-- **Feed.** Toca Inicio para volver arriba. Tira de la lista desde el borde superior para actualizarla. También se sincroniza al volver tras al menos 60 segundos en segundo plano.
+- **Feed.** Toca Inicio o cambia de categoría para volver al aviso más reciente de la lista. Tira de la lista desde el borde superior para actualizarla. También se sincroniza al volver tras al menos 60 segundos en segundo plano.
 - **Búsqueda.** Supabase devuelve resúmenes de 20 en 20. Los filtros combinan categoría, facultad y fechas. Si el aviso no está en Room, se descarga al abrir su detalle.
 - **Edición.** Los autores pueden editar texto, emojis y archivos desde un mismo diálogo. En sus tarjetas del feed, el menú permite editar o eliminar.
 - **Imágenes.** Se seleccionan hasta cuatro por aviso y se agrupan en un bloque cuadrado en el formulario, el feed y el detalle. El bucket admite JPG, PNG y WebP de hasta 5 MiB. La lectura por URL es pública y las operaciones de escritura están protegidas por RLS.
-- **Videos.** MP4 opcional de hasta 20 MiB por aviso, sin límite de duración. La app genera una miniatura y reproduce el video bajo demanda en el detalle con Media3 ExoPlayer.
-- **Reacciones.** Los autores eligen de un catálogo compartido desde Mis publicaciones. Supabase valida la selección al guardar cada voto.
+- **Videos.** MP4 opcional de hasta 20 MiB por aviso, sin límite de duración. Pulsa ▶ sobre la miniatura para reproducir en el feed o en el detalle con Media3 ExoPlayer. El video se detiene al salir de la pantalla.
+- **Reacciones.** Los autores eligen del catálogo qué emojis habilitar. El total abre un panel de participantes en el detalle con nombre, foto y filtro por emoji.
+- **Perfil.** Lectores y publicadores pueden cambiar su foto en Mi perfil. El feed usa la foto del autor y muestra sus iniciales cuando no hay foto.
 
 Consulta [el contexto de arquitectura](CONTEXTO_SESION_ARQUITECTURA.md#historial-del-esquema-desplegado) para ver las migraciones, funciones y políticas de Supabase.
